@@ -1,0 +1,582 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>双鸣蝉</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background: linear-gradient(145deg, #f9f3e6 0%, #ffe6d5 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-family: 'Segoe UI', 'Poppins', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .card {
+            max-width: 680px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.96);
+            backdrop-filter: blur(2px);
+            border-radius: 56px;
+            box-shadow: 0 25px 45px rgba(0, 0, 0, 0.2), 0 0 0 1px rgba(255, 215, 180, 0.6);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            padding: 24px 22px 34px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #e45c3c, #ff9a6e);
+            background-clip: text;
+            -webkit-background-clip: text;
+            color: transparent;
+            margin: 0 0 5px;
+            letter-spacing: -0.5px;
+        }
+
+        .sub {
+            color: #b45a3b;
+            font-weight: 500;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            border-bottom: 2px dotted #ffcdb0;
+            display: inline-block;
+            padding-bottom: 4px;
+        }
+
+        /* 登录区 */
+        .login-overlay {
+            background: rgba(0,0,0,0.03);
+            border-radius: 48px;
+            padding: 20px 18px;
+            margin-bottom: 18px;
+            transition: all 0.2s;
+        }
+        .login-title {
+            font-weight: 700;
+            color: #c25d38;
+            margin-bottom: 16px;
+            font-size: 1.1rem;
+        }
+        .name-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .name-btn {
+            background: #fff2ea;
+            border: 2px solid #ffcdb5;
+            padding: 12px 28px;
+            border-radius: 60px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #9b4a2a;
+            min-width: 130px;
+        }
+        .name-btn.active {
+            background: #ff8a5c;
+            border-color: #ff8a5c;
+            color: white;
+            box-shadow: 0 6px 12px rgba(255, 100, 50, 0.3);
+        }
+        .name-btn:active {
+            transform: scale(0.96);
+        }
+        .confirm-login {
+            margin-top: 20px;
+            background: #ff6b3c;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 60px;
+            font-weight: bold;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+        }
+
+        /* 状态区 */
+        .status-panel {
+            background: #fff6ef;
+            border-radius: 48px;
+            padding: 14px 16px;
+            margin: 10px 0 20px;
+            box-shadow: inset 0 1px 3px #0001, 0 6px 12px -6px rgba(0,0,0,0.1);
+        }
+        .connection-status {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 8px;
+        }
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: #ffede3;
+            padding: 6px 16px;
+            border-radius: 60px;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 10px;
+            background: #ccc;
+        }
+        .status-dot.online { background: #2ecc71; box-shadow: 0 0 6px #2ecc71; }
+        .status-dot.offline { background: #e74c3c; }
+        .info-text {
+            background: #ffefe4;
+            border-radius: 50px;
+            padding: 10px;
+            font-size: 0.85rem;
+            color: #ad5a38;
+            margin-top: 16px;
+        }
+
+        /* 想念按钮 */
+        .miss-area {
+            margin: 20px 0 18px;
+        }
+        .miss-btn {
+            background: radial-gradient(circle at 30% 10%, #ff5e3a, #d93c1a);
+            border: none;
+            width: 170px;
+            height: 170px;
+            border-radius: 100%;
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: white;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            box-shadow: 0 20px 30px -8px #ff8c5e, 0 0 0 6px #fff3e8;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin: 0 auto;
+        }
+        .miss-btn span:first-child { font-size: 3.2rem; }
+        .miss-btn span:last-child { font-size: 1.2rem; letter-spacing: 2px; }
+        .miss-btn:active { transform: scale(0.94); }
+        .miss-btn:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
+
+        /* 记录展示区 */
+        .records-area {
+            background: #fff4ed;
+            border-radius: 32px;
+            padding: 12px 14px;
+            margin-top: 18px;
+            text-align: left;
+            border: 1px solid #ffe0cf;
+        }
+        .records-title {
+            font-weight: 800;
+            color: #e05e34;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-left: 4px solid #ff8a5c;
+            padding-left: 10px;
+        }
+        .record-list {
+            max-height: 260px;
+            overflow-y: auto;
+            font-size: 0.8rem;
+        }
+        .record-item {
+            background: white;
+            margin: 6px 0;
+            padding: 8px 12px;
+            border-radius: 28px;
+            color: #6d3b21;
+            border: 1px solid #ffdecb;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+        .record-time {
+            font-family: monospace;
+            font-size: 0.7rem;
+            background: #fff0e6;
+            padding: 2px 8px;
+            border-radius: 20px;
+            color: #b45a3b;
+        }
+        .empty-records {
+            text-align: center;
+            color: #c68b6b;
+            padding: 20px;
+            font-style: italic;
+        }
+        .clear-btn {
+            background: none;
+            border: 1px solid #ffcdb5;
+            padding: 5px 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            color: #b45a3b;
+            cursor: pointer;
+            margin-left: auto;
+        }
+        footer {
+            font-size: 0.7rem;
+            color: #c68b6b;
+            margin-top: 18px;
+        }
+        .toast-msg {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #5a3e2ecc;
+            backdrop-filter: blur(8px);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 60px;
+            font-size: 0.8rem;
+            z-index: 1000;
+            pointer-events: none;
+            transition: opacity 0.3s;
+        }
+    </style>
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+</head>
+<body>
+<div class="card" id="app">
+    <h1>💕双鸣蝉 💕</h1>
+    <div class="sub">周周 ⇄ 小汪 · 每一次思念都被珍藏</div>
+
+    <!-- 登录区块：必须选择我是周周还是小汪 -->
+    <div class="login-overlay" id="loginPanel">
+        <div class="login-title">🌸 hello！是谁来了呀🌸</div>
+        <div class="name-buttons">
+            <button class="name-btn" data-name="周周">🐣 我是周周</button>
+            <button class="name-btn" data-name="小汪">🐶 我是小汪</button>
+        </div>
+        <button class="confirm-login" id="confirmLoginBtn">✨ 确认✨</button>
+        <div style="font-size:0.7rem; margin-top:12px; color:#b97f5e;">💡 选择身份后，记录会以你的视角展示文字</div>
+    </div>
+
+    <!-- 主内容区（登录后可见） -->
+    <div id="mainContent" style="display: none;">
+        <!-- 状态栏 -->
+        <div class="status-panel">
+            <div class="connection-status">
+                <div class="status-badge"><span class="status-dot" id="connDot"></span><span id="connText">连接中...</span></div>
+                <div class="status-badge"><span>👤</span><span id="currentUserLabel">未登录</span></div>
+            </div>
+            <div class="info-text" id="connHint">✨ 已连接服务器，随时可以记录思念 ✨</div>
+        </div>
+
+        <!-- 想念按钮 - 无需等待对方在线 -->
+        <div class="miss-area">
+            <button class="miss-btn" id="missButton">
+                <span>💗</span>
+                <span>I MISS YOU</span>
+            </button>
+            <div class="info-text" id="peerHint">💖 点击按钮即可记录此刻思念</div>
+        </div>
+
+        <!-- 记录展示区 -->
+        <div class="records-area">
+            <div class="records-title">
+                📜 想念时光轴
+          <!--      <button id="clearRecordsBtn" class="clear-btn">🗑️ 清空记录</button>-->
+            </div>
+            <div id="recordList" class="record-list">
+                <div class="empty-records">✨ 暂无想念记录，点击按钮留下第一份想念吧 ✨</div>
+            </div>
+        </div>
+        <footer>⚡ 每次点击都会记录。无需对方在线，心意永存。</footer>
+    </div>
+</div>
+<div id="toastMsg" class="toast-msg" style="opacity:0;">💬</div>
+
+<script>
+    // ---------- 全局变量 ----------
+    let currentUser = null;          // "周周" 或 "小汪"
+    let socket = null;
+    let isConnected = false;
+    const ROOM_ID = "zhouzhou_xiaowang_forever";   // 固定房间（用于同步记录）
+
+    // ---------- 辅助函数 ----------
+    function showToast(msg, duration = 2000) {
+        const toast = document.getElementById('toastMsg');
+        toast.innerText = msg;
+        toast.style.opacity = '1';
+        setTimeout(() => {
+            toast.style.opacity = '0';
+        }, duration);
+    }
+
+    function formatTime() {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    }
+
+    // 根据当前登录人 生成展示文案
+    function generateMessage(record) {
+        const { from, to, time } = record;
+        if (currentUser === "周周") {
+            if (from === "周周" && to === "小汪") {
+                return `💘 你在 ${time} 想了小汪一次`;
+            } else if (from === "小汪" && to === "周周") {
+                return `💞 小汪在 ${time} 想了你一次`;
+            }
+        } else if (currentUser === "小汪") {
+            if (from === "小汪" && to === "周周") {
+                return `💘 你在 ${time} 想了周周一次`;
+            } else if (from === "周周" && to === "小汪") {
+                return `💞 周周在 ${time} 想了你一次`;
+            }
+        }
+        return `${from} → ${to} at ${time}`;
+    }
+
+    // 渲染记录列表
+    function renderRecords(records) {
+        const container = document.getElementById('recordList');
+        if (!container) return;
+        if (!records || records.length === 0) {
+            container.innerHTML = '<div class="empty-records">📭 还没有想念记录，快点击按钮留下第一份想念～</div>';
+            return;
+        }
+        // 按时间倒序（最新的在上面）
+        const sorted = [...records].sort((a,b) => b.timestamp - a.timestamp);
+        container.innerHTML = sorted.map(rec => {
+            const msg = generateMessage(rec);
+            return `<div class="record-item"><span>${msg}</span><span class="record-time">${rec.time}</span></div>`;
+        }).join('');
+    }
+
+    // 加载历史记录
+    function loadHistory() {
+        if (!socket || !isConnected) {
+            console.warn("未连接，无法加载历史");
+            return;
+        }
+        socket.emit('get-records', (response) => {
+            if (response && response.success) {
+                const records = response.records || [];
+                window.recordsData = records;
+                renderRecords(records);
+                console.log(`📚 加载了 ${records.length} 条想念记录`);
+            } else {
+                console.error("加载历史记录失败");
+            }
+        });
+    }
+
+    // 添加一条新记录
+    function addRecordToBackend(from, to, time, timestamp, callback) {
+        if (!socket || !isConnected) {
+            showToast("❌ 未连接服务器，无法记录", 1500);
+            if (callback) callback(false);
+            return;
+        }
+        socket.emit('new-record', { from, to, time, timestamp }, (response) => {
+            if (response && response.success) {
+                window.recordsData = response.records;
+                renderRecords(window.recordsData);
+                showToast(`📝 已记录：${from} 想念 ${to}`, 1500);
+                if (callback) callback(true);
+            } else {
+                showToast(`❌ 记录失败: ${response?.message || '未知错误'}`, 2000);
+                if (callback) callback(false);
+            }
+        });
+    }
+
+    // 清空记录
+    function clearAllRecords() {
+        if (!socket || !isConnected) {
+            showToast("未连接服务器，无法清空", 1500);
+            return;
+        }
+        if (confirm("⚠️ 确定要清空所有想念记录吗？此操作不可恢复。")) {
+            socket.emit('clear-records', (response) => {
+                if (response && response.success) {
+                    window.recordsData = [];
+                    renderRecords([]);
+                    showToast("🗑️ 所有记录已清空", 1500);
+                } else {
+                    showToast("清空失败", 1500);
+                }
+            });
+        }
+    }
+
+    // 发送想念（核心：只要连接服务器，无需对方在线）
+    function sendMiss() {
+        if (!socket || !isConnected) {
+            showToast("❌ 网络未连接，请刷新页面重试", 1500);
+            return;
+        }
+        if (!currentUser) {
+            showToast("请先登录", 1500);
+            return;
+        }
+        const target = (currentUser === "周周") ? "小汪" : "周周";
+        const nowTime = formatTime();
+        const timestamp = Date.now();
+        
+        // 存储记录到后端txt (服务器写入文件)
+        addRecordToBackend(currentUser, target, nowTime, timestamp, (success) => {
+            if (success) {
+                // 可选：额外发送一个提醒事件给对方（如果对方在线会收到弹窗，但不需要对方在线也能记录）
+                // 为了让体验更好，如果对方在线则实时弹窗；如果不在线，记录也会保存，对方下次打开能看到。
+                socket.emit('miss-notify', { roomId: ROOM_ID, from: currentUser, time: nowTime });
+            }
+        });
+    }
+
+    // 更新UI连接状态
+    function updateConnectionUI() {
+        const connDot = document.getElementById('connDot');
+        const connText = document.getElementById('connText');
+        const missButton = document.getElementById('missButton');
+        
+        if (isConnected) {
+            connDot.className = "status-dot online";
+            connText.innerText = "已连接";
+            if (missButton) missButton.disabled = false;
+        } else {
+            connDot.className = "status-dot offline";
+            connText.innerText = "未连接";
+            if (missButton) missButton.disabled = true;
+        }
+    }
+
+    // 登录逻辑
+    function setupLogin() {
+        let selectedName = null;
+        const btns = document.querySelectorAll('.name-btn');
+        const confirmBtn = document.getElementById('confirmLoginBtn');
+        btns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                btns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                selectedName = btn.getAttribute('data-name');
+            });
+        });
+        confirmBtn.addEventListener('click', () => {
+            if (!selectedName) {
+                alert("请先选择你是周周还是小汪～");
+                return;
+            }
+            currentUser = selectedName;
+            document.getElementById('loginPanel').style.display = 'none';
+            document.getElementById('mainContent').style.display = 'block';
+            document.getElementById('currentUserLabel').innerText = currentUser;
+            // 登录后初始化socket连接
+            initSocketAfterLogin();
+        });
+    }
+
+    // 登录后才连接socket
+    function initSocketAfterLogin() {
+        const socketUrl = window.location.origin;
+        socket = io(socketUrl, {
+            transports: ['websocket', 'polling'],
+            reconnection: true,
+        });
+        
+        socket.on('connect', () => {
+            isConnected = true;
+            updateConnectionUI();
+            console.log("✅ 服务器连接成功");
+            showToast("✅ 连接成功，可以开始记录想念了", 1500);
+            // 加入固定房间（用于记录同步和可选通知）
+            socket.emit('join-room', ROOM_ID, (resp) => {
+                if (resp && resp.success) {
+                    console.log(`加入房间成功，当前人数 ${resp.count}`);
+                    // 加载历史记录
+                    loadHistory();
+                } else {
+                    console.warn("房间加入失败，但记录功能仍可用");
+                    // 即使加入房间失败，仍可单独获取记录（但为了保险，单独再请求一次）
+                    loadHistory();
+                }
+            });
+        });
+        
+        socket.on('disconnect', () => {
+            isConnected = false;
+            updateConnectionUI();
+            console.log("⚠️ 与服务器断开连接");
+            showToast("⚠️ 连接断开，请刷新页面", 2000);
+        });
+        
+        socket.on('connect_error', (err) => {
+            isConnected = false;
+            updateConnectionUI();
+            console.error("连接错误:", err);
+            showToast("❌ 无法连接服务器，请检查后端是否运行", 3000);
+        });
+        
+        // 监听对方发来的想念通知（如果对方在线，会实时弹窗，同时记录已经保存）
+        socket.on('someone-missed', (data) => {
+            const { from, time } = data || {};
+            if (from && from !== currentUser) {
+                const targetName = (currentUser === "周周") ? "小汪" : "周周";
+                // 如果对方想念的对象是我
+                if ((from === "周周" && currentUser === "小汪") || (from === "小汪" && currentUser === "周周")) {
+                    alert(`💌 ${from} 在 ${time} 想你了一次 💌`);
+                    showToast(`💖 ${from} 想你了！`, 2000);
+                    // 刷新记录，确保看到最新记录
+                    loadHistory();
+                }
+            } else if (!from) {
+                // 兼容旧版通知
+                alert("💌 对方想你了一次 💌");
+                loadHistory();
+            }
+        });
+        
+        // 监听记录更新（双方同步）
+        socket.on('records-updated', (data) => {
+            if (data && data.records) {
+                window.recordsData = data.records;
+                renderRecords(window.recordsData);
+                console.log("📡 记录已同步更新");
+            }
+        });
+        
+        // 绑定清空按钮事件
+        const clearBtn = document.getElementById('clearRecordsBtn');
+        if (clearBtn) clearBtn.onclick = () => clearAllRecords();
+        
+        const missBtn = document.getElementById('missButton');
+        if (missBtn) missBtn.onclick = () => sendMiss();
+    }
+    
+    // 初始化页面
+    setupLogin();
+</script>
+</body>
+</html>
