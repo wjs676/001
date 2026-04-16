@@ -269,7 +269,7 @@
 <body>
 <div class="card" id="app">
     <h1>💕双鸣蝉 💕</h1>
-    <div class="sub">周周 ⇄ 小汪 · 每一次思念都被珍藏</div>
+    <div class="sub">爱你的话说过千万遍 句句有回音</div>
 
     <!-- 登录区块：必须选择我是周周还是小汪 -->
     <div class="login-overlay" id="loginPanel">
@@ -290,7 +290,7 @@
                 <div class="status-badge"><span class="status-dot" id="connDot"></span><span id="connText">连接中...</span></div>
                 <div class="status-badge"><span>👤</span><span id="currentUserLabel">未登录</span></div>
             </div>
-            <div class="info-text" id="connHint">✨ 已连接服务器，随时可以记录思念 ✨</div>
+            <div class="info-text" id="connHint">✨ 已连接服务器，ta现在正在想你 ✨</div>
         </div>
 
         <!-- 想念按钮 - 无需等待对方在线 -->
@@ -299,7 +299,7 @@
                 <span>💗</span>
                 <span>I MISS YOU</span>
             </button>
-            <div class="info-text" id="peerHint">💖 点击按钮即可记录此刻思念</div>
+            <div class="info-text" id="peerHint">💖 点击按钮记录此刻思念</div>
         </div>
 
         <!-- 记录展示区 -->
@@ -344,15 +344,15 @@
         const { from, to, time } = record;
         if (currentUser === "周周") {
             if (from === "周周" && to === "小汪") {
-                return `💘 你在 ${time} 想了小汪一次`;
+                return `💘 双鸣蝉：你在想小汪`;
             } else if (from === "小汪" && to === "周周") {
-                return `💞 小汪在 ${time} 想了你一次`;
+                return `💞 双鸣蝉：小汪在想你`;
             }
         } else if (currentUser === "小汪") {
             if (from === "小汪" && to === "周周") {
-                return `💘 你在 ${time} 想了周周一次`;
+                return `💘 双鸣蝉：你在想周周`;
             } else if (from === "周周" && to === "小汪") {
-                return `💞 周周在 ${time} 想了你一次`;
+                return `💞 双鸣蝉：周周在想你`;
             }
         }
         return `${from} → ${to} at ${time}`;

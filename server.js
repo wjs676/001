@@ -158,7 +158,7 @@ io.on('connection', (socket) => {
 app.use(express.static('public'));
 
 const PORT = process.env.PORT || 3000;
-server.listen(PORT, () => {
-    console.log(`🚀 服务器运行在 http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+    console.log(`🚀 服务器运行在 http://0.0.0.0:${PORT}`);
     console.log(`📁 记录文件位置: ${RECORDS_FILE}`);
 });
