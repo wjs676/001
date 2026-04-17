@@ -877,7 +877,7 @@
                 if (data.success) {
                     likeCount = data.likes;
                     document.getElementById('likeCount').innerText = likeCount;
-                    addNotification(`👍 你点赞了这对恋人！当前共 ${likeCount} 人点赞`, 'miss', 2500);
+                    addNotification(`👍 你点赞了他们！当前共 ${likeCount} 人点赞`, 'miss', 2500);
                 }
             })
             .catch(err => console.error('点赞失败:', err));
@@ -897,7 +897,7 @@
                 if (data.success) {
                     dislikeCount = data.dislikes;
                     document.getElementById('dislikeCount').innerText = dislikeCount;
-                    addNotification(`👎 你吐槽了这两个人！当前共 ${dislikeCount} 人吐槽`, 'miss', 2500);
+                    addNotification(`👎 你吐槽了他们！当前共 ${dislikeCount} 人吐槽`, 'miss', 2500);
                 }
             })
             .catch(err => console.error('吐槽失败:', err));
