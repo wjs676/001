@@ -158,6 +158,12 @@ function clearRecords() {
 // ========== API 路由 ==========
 app.use(express.json());
 
+// 访客获取想念记录API
+app.get('/api/records', (req, res) => {
+    const records = loadRecords();
+    res.json({ success: true, records });
+});
+
 // 留言板API
 app.get('/api/messages', (req, res) => {
     const messages = loadMessages();

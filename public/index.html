@@ -961,17 +961,35 @@
         }
     }
 
-    function generateMessage(record) {
-        const { from, to } = record;
-        if (currentUser === "周周") {
-            if (from === "周周" && to === "小汪") return `💘 你在想小汪，为什么不去找他`;
-            if (from === "小汪" && to === "周周") return `💞 小汪在想你，快去回应他吧`;
-        } else if (currentUser === "小汪") {
-            if (from === "小汪" && to === "周周") return `💘 你在想周周，为什么不去找她`;
-            if (from === "周周" && to === "小汪") return `💞 周周在想你，快去回应她吧`;
+   function generateMessage(record) {
+    const { from, to } = record;
+    
+    // 访客模式：显示格式为 "周周 正在想 小汪" 或 "小汪 正在想 周周"
+    if (isGuest) {
+        if (from === "周周" && to === "小汪") {
+            return `💕 周周 正在想 小汪`;
+        } else if (from === "小汪" && to === "周周") {
+            return `💕 小汪 正在想 周周`;
         }
-        return `${from} → ${to}`;
+        return `${from} 正在想 ${to}`;
     }
+    
+    // 正常用户模式（周周或小汪）
+    if (currentUser === "周周") {
+        if (from === "周周" && to === "小汪") {
+            return `💘 你在想小汪，为什么不去找他`;
+        } else if (from === "小汪" && to === "周周") {
+            return `💞 小汪在想你，快去回应他吧`;
+        }
+    } else if (currentUser === "小汪") {
+        if (from === "小汪" && to === "周周") {
+            return `💘 你在想周周，为什么不去找她`;
+        } else if (from === "周周" && to === "小汪") {
+            return `💞 周周在想你，快去回应她吧`;
+        }
+    }
+    return `${from} → ${to}`;
+}
 
     function renderRecords(records) {
         const container = document.getElementById('recordList');
@@ -988,13 +1006,25 @@
     }
 
     function loadHistory() {
-        if (!socket || !isConnected || isGuest) return;
-        socket.emit('get-records', (response) => {
-            if (response && response.success) {
-                renderRecords(response.records);
-            }
-        });
+    // 访客通过 HTTP API 获取记录
+    if (isGuest) {
+        fetch('/api/records')
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    renderRecords(data.records);
+                }
+            })
+            .catch(err => console.error('加载记录失败:', err));
+        return;
     }
+    if (!socket || !isConnected) return;
+    socket.emit('get-records', (response) => {
+        if (response && response.success) {
+            renderRecords(response.records);
+        }
+    });
+}
 
     function addRecordToBackend(from, to, time, timestamp, callback) {
         if (!socket || !isConnected || isGuest) {
@@ -1124,13 +1154,13 @@
         document.getElementById('dislikeBtn').onclick = () => sendDislike();
         
         if (isGuest) {
-            // 访客不需要socket连接，直接显示界面
-            isConnected = true;
-            updateConnectionUI();
-            showToast("👤 访客模式，可以留言、点赞/吐槽", 2000);
-            loadMessages();
-            return;
-        }
+    isConnected = true;
+    updateConnectionUI();
+    showToast("👤 访客模式，可以浏览留言板、点赞/吐槽、查看想念记录", 2000);
+    loadMessages();
+    loadHistory();  // 新增：加载想念记录
+    return;
+}
         
         const socketUrl = window.location.origin;
         socket = io(socketUrl, {
