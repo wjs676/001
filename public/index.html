@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>双鸣蝉</title>
+    <title>小汪和周周的双鸣蝉</title>
     <style>
         * {
             box-sizing: border-box;
@@ -350,6 +350,53 @@
         .miss-btn:active { transform: scale(0.94); }
         .miss-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
+        /* 点赞踩按钮样式 */
+        .reaction-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 20px;
+        }
+        .reaction-btn {
+            background: #fff2ea;
+            border: 2px solid #ffcdb5;
+            padding: 10px 25px;
+            border-radius: 60px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #9b4a2a;
+        }
+        .reaction-btn span:first-child {
+            font-size: 1.3rem;
+        }
+        .reaction-btn span:last-child {
+            font-size: 1rem;
+            background: #ffede3;
+            padding: 2px 8px;
+            border-radius: 30px;
+            min-width: 35px;
+        }
+        .reaction-btn:active {
+            transform: scale(0.95);
+        }
+        .reaction-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .like-btn:hover {
+            background: #d4f5d4;
+            border-color: #2ecc71;
+        }
+        .dislike-btn:hover {
+            background: #ffe0e0;
+            border-color: #e74c3c;
+        }
+
         .records-area {
             background: #fff4ed;
             border-radius: 32px;
@@ -518,6 +565,19 @@
                 <span>💗</span>
                 <span>I MISS YOU</span>
             </button>
+            
+            <!-- 点赞和踩按钮 -->
+            <div class="reaction-buttons">
+                <button class="reaction-btn like-btn" id="likeBtn">
+                    <span>👍</span>
+                    <span id="likeCount">0</span>
+                </button>
+                <button class="reaction-btn dislike-btn" id="dislikeBtn">
+                    <span>👎</span>
+                    <span id="dislikeCount">0</span>
+                </button>
+            </div>
+            
             <div class="info-text" id="peerHint">💖 点击按钮记录此刻思念！</div>
         </div>
 
@@ -612,6 +672,35 @@
     }
 
     // ========== 小丑特效 ==========
+    class ClownParticle {
+        constructor(x, y, vx, vy, color) {
+            this.x = x;
+            this.y = y;
+            this.vx = vx;
+            this.vy = vy;
+            this.color = color;
+            this.alpha = 1;
+            this.size = 10;
+            this.gravity = 0.12;
+        }
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.vy += this.gravity;
+            this.alpha -= 0.02;
+            this.size *= 0.98;
+            return this.alpha > 0;
+        }
+        draw() {
+            ctx.save();
+            ctx.globalAlpha = this.alpha;
+            ctx.font = `${this.size}px "Segoe UI Emoji", "Apple Color Emoji"`;
+            ctx.fillStyle = this.color;
+            ctx.fillText('🤡', this.x, this.y);
+            ctx.restore();
+        }
+    }
+
     function showClownFirework() {
         const x = canvas.width / 2;
         const y = canvas.height / 2;
@@ -639,35 +728,6 @@
                 }
             }
             animate();
-        }
-    }
-
-    class ClownParticle {
-        constructor(x, y, vx, vy, color) {
-            this.x = x;
-            this.y = y;
-            this.vx = vx;
-            this.vy = vy;
-            this.color = color;
-            this.alpha = 1;
-            this.size = 10;
-            this.gravity = 0.12;
-        }
-        update() {
-            this.x += this.vx;
-            this.y += this.vy;
-            this.vy += this.gravity;
-            this.alpha -= 0.02;
-            this.size *= 0.98;
-            return this.alpha > 0;
-        }
-        draw() {
-            ctx.save();
-            ctx.globalAlpha = this.alpha;
-            ctx.font = `${this.size}px "Segoe UI Emoji", "Apple Color Emoji"`;
-            ctx.fillStyle = this.color;
-            ctx.fillText('🤡', this.x, this.y);
-            ctx.restore();
         }
     }
 
@@ -775,7 +835,6 @@
                 messages = data.messages;
                 renderMessages();
                 addNotification('📝 留言已发送！', 'info', 1500);
-                // 触发小丑特效
                 showClownFirework();
                 document.getElementById('messageInput').value = '';
             } else {
@@ -783,6 +842,65 @@
             }
         })
         .catch(err => console.error('发送留言失败:', err));
+    }
+
+    // ========== 点赞踩功能 ==========
+    let likeCount = 0;
+    let dislikeCount = 0;
+    let lastLikeTime = 0;
+    let lastDislikeTime = 0;
+    const THROTTLE_INTERVAL = 500; // 1秒最多2次
+
+    function loadReactionCounts() {
+        fetch('/api/reactions')
+            .then(res => res.json())
+            .then(data => {
+                likeCount = data.likes || 0;
+                dislikeCount = data.dislikes || 0;
+                document.getElementById('likeCount').innerText = likeCount;
+                document.getElementById('dislikeCount').innerText = dislikeCount;
+            })
+            .catch(err => console.error('加载反应数据失败:', err));
+    }
+
+    function sendLike() {
+        const now = Date.now();
+        if (now - lastLikeTime < THROTTLE_INTERVAL) {
+            addNotification('⚠️ 操作太快啦，请稍后再试', 'info', 1500);
+            return;
+        }
+        lastLikeTime = now;
+        
+        fetch('/api/like', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    likeCount = data.likes;
+                    document.getElementById('likeCount').innerText = likeCount;
+                    addNotification(`👍 你点赞了这对恋人！当前共 ${likeCount} 人点赞`, 'miss', 2500);
+                }
+            })
+            .catch(err => console.error('点赞失败:', err));
+    }
+
+    function sendDislike() {
+        const now = Date.now();
+        if (now - lastDislikeTime < THROTTLE_INTERVAL) {
+            addNotification('⚠️ 操作太快啦，请稍后再试', 'info', 1500);
+            return;
+        }
+        lastDislikeTime = now;
+        
+        fetch('/api/dislike', { method: 'POST' })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success) {
+                    dislikeCount = data.dislikes;
+                    document.getElementById('dislikeCount').innerText = dislikeCount;
+                    addNotification(`👎 你吐槽了这两个人！当前共 ${dislikeCount} 人吐槽`, 'miss', 2500);
+                }
+            })
+            .catch(err => console.error('吐槽失败:', err));
     }
 
     // ========== 应用逻辑 ==========
@@ -816,7 +934,7 @@
         if (isGuest) {
             peerDot.className = "peer-dot offline";
             peerStatusText.innerText = "访客模式";
-            peerStatusMsg.innerText = `👤 你是访客身份，可以留言，但不能点击按钮哦`;
+            peerStatusMsg.innerText = `👤 你是访客身份，可以留言、点赞/吐槽，但不能点击miss按钮`;
             return;
         }
         
@@ -998,11 +1116,18 @@
     }
 
     function initSocketAfterLogin() {
+        // 加载点赞踩数据（所有用户都需要）
+        loadReactionCounts();
+        
+        // 绑定点赞踩按钮事件
+        document.getElementById('likeBtn').onclick = () => sendLike();
+        document.getElementById('dislikeBtn').onclick = () => sendDislike();
+        
         if (isGuest) {
             // 访客不需要socket连接，直接显示界面
             isConnected = true;
             updateConnectionUI();
-            showToast("👤 访客模式，可以浏览留言板", 2000);
+            showToast("👤 访客模式，可以留言、点赞/吐槽", 2000);
             loadMessages();
             return;
         }
@@ -1055,7 +1180,7 @@
         
         socket.on('offline-misses', (data) => {
             const { count, misses } = data;
-            addNotification(`💌 你离线期间收到了 ${count} 次想念`, 'miss', 5000);
+            addNotification(`💌 你不在时间收到了 ${count} 次想念，可惜思念无声`, 'miss', 5000);
             loadHistory();
         });
         

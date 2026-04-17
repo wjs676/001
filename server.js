@@ -16,13 +16,14 @@ const io = new Server(server, {
 const RECORDS_FILE = path.join(__dirname, 'records.txt');
 const OFFLINE_MSGS_FILE = path.join(__dirname, 'offline_messages.json');
 const MESSAGES_FILE = path.join(__dirname, 'messages.json');
+const REACTIONS_FILE = path.join(__dirname, 'reactions.json');
 
 // 存储结构
 const rooms = new Map();
 const socketRoom = new Map();
 const roomIdentities = new Map();
 
-// 读取留言
+// ========== 留言板功能 ==========
 function loadMessages() {
     try {
         if (fs.existsSync(MESSAGES_FILE)) {
@@ -35,7 +36,6 @@ function loadMessages() {
     return [];
 }
 
-// 保存留言
 function saveMessages(messages) {
     try {
         fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2), 'utf8');
@@ -46,7 +46,6 @@ function saveMessages(messages) {
     }
 }
 
-// 添加留言
 function addMessage(content, time) {
     const messages = loadMessages();
     messages.push({ content, time, timestamp: Date.now() });
@@ -54,7 +53,30 @@ function addMessage(content, time) {
     return messages;
 }
 
-// 读取离线消息
+// ========== 点赞踩功能 ==========
+function loadReactions() {
+    try {
+        if (fs.existsSync(REACTIONS_FILE)) {
+            const content = fs.readFileSync(REACTIONS_FILE, 'utf8');
+            return JSON.parse(content);
+        }
+    } catch (e) {
+        console.error('读取反应数据失败:', e);
+    }
+    return { likes: 0, dislikes: 0 };
+}
+
+function saveReactions(data) {
+    try {
+        fs.writeFileSync(REACTIONS_FILE, JSON.stringify(data, null, 2), 'utf8');
+        return true;
+    } catch (e) {
+        console.error('保存反应数据失败:', e);
+        return false;
+    }
+}
+
+// ========== 离线消息功能 ==========
 function loadOfflineMessages() {
     try {
         if (fs.existsSync(OFFLINE_MSGS_FILE)) {
@@ -97,6 +119,7 @@ function getAndClearOfflineMisses(identity, partnerIdentity) {
     return misses;
 }
 
+// ========== 想念记录功能 ==========
 function loadRecords() {
     try {
         if (fs.existsSync(RECORDS_FILE)) {
@@ -132,8 +155,10 @@ function clearRecords() {
     return [];
 }
 
-// 留言板API
+// ========== API 路由 ==========
 app.use(express.json());
+
+// 留言板API
 app.get('/api/messages', (req, res) => {
     const messages = loadMessages();
     res.json(messages);
@@ -150,6 +175,27 @@ app.post('/api/messages', (req, res) => {
     res.json({ success: true, messages: updatedMessages });
 });
 
+// 点赞踩API
+app.get('/api/reactions', (req, res) => {
+    const reactions = loadReactions();
+    res.json(reactions);
+});
+
+app.post('/api/like', (req, res) => {
+    const reactions = loadReactions();
+    reactions.likes = (reactions.likes || 0) + 1;
+    saveReactions(reactions);
+    res.json({ success: true, likes: reactions.likes });
+});
+
+app.post('/api/dislike', (req, res) => {
+    const reactions = loadReactions();
+    reactions.dislikes = (reactions.dislikes || 0) + 1;
+    saveReactions(reactions);
+    res.json({ success: true, dislikes: reactions.dislikes });
+});
+
+// ========== Socket.IO 事件处理 ==========
 io.on('connection', (socket) => {
     console.log(`✅ 用户连接: ${socket.id}`);
 
@@ -318,4 +364,5 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`📁 记录文件位置: ${RECORDS_FILE}`);
     console.log(`📁 离线消息文件位置: ${OFFLINE_MSGS_FILE}`);
     console.log(`📁 留言板文件位置: ${MESSAGES_FILE}`);
+    console.log(`📁 点赞踩文件位置: ${REACTIONS_FILE}`);
 });
