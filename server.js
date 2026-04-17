@@ -15,11 +15,44 @@ const io = new Server(server, {
 
 const RECORDS_FILE = path.join(__dirname, 'records.txt');
 const OFFLINE_MSGS_FILE = path.join(__dirname, 'offline_messages.json');
+const MESSAGES_FILE = path.join(__dirname, 'messages.json');
 
 // 存储结构
-const rooms = new Map();              // roomId -> Set of socket ids
-const socketRoom = new Map();        // socketId -> roomId
-const roomIdentities = new Map();    // roomId -> Map { identity: socketId }
+const rooms = new Map();
+const socketRoom = new Map();
+const roomIdentities = new Map();
+
+// 读取留言
+function loadMessages() {
+    try {
+        if (fs.existsSync(MESSAGES_FILE)) {
+            const content = fs.readFileSync(MESSAGES_FILE, 'utf8');
+            return JSON.parse(content);
+        }
+    } catch (e) {
+        console.error('读取留言文件失败:', e);
+    }
+    return [];
+}
+
+// 保存留言
+function saveMessages(messages) {
+    try {
+        fs.writeFileSync(MESSAGES_FILE, JSON.stringify(messages, null, 2), 'utf8');
+        return true;
+    } catch (e) {
+        console.error('保存留言文件失败:', e);
+        return false;
+    }
+}
+
+// 添加留言
+function addMessage(content, time) {
+    const messages = loadMessages();
+    messages.push({ content, time, timestamp: Date.now() });
+    saveMessages(messages);
+    return messages;
+}
 
 // 读取离线消息
 function loadOfflineMessages() {
@@ -34,7 +67,6 @@ function loadOfflineMessages() {
     return {};
 }
 
-// 保存离线消息
 function saveOfflineMessages(messages) {
     try {
         fs.writeFileSync(OFFLINE_MSGS_FILE, JSON.stringify(messages, null, 2), 'utf8');
@@ -45,10 +77,9 @@ function saveOfflineMessages(messages) {
     }
 }
 
-// 添加离线想念记录
 function addOfflineMiss(from, to, time) {
     const messages = loadOfflineMessages();
-    const key = `${to}_${from}`; // 接收方_发送方
+    const key = `${to}_${from}`;
     if (!messages[key]) {
         messages[key] = [];
     }
@@ -57,7 +88,6 @@ function addOfflineMiss(from, to, time) {
     return messages[key].length;
 }
 
-// 获取并清除离线想念记录
 function getAndClearOfflineMisses(identity, partnerIdentity) {
     const messages = loadOfflineMessages();
     const key = `${identity}_${partnerIdentity}`;
@@ -67,7 +97,6 @@ function getAndClearOfflineMisses(identity, partnerIdentity) {
     return misses;
 }
 
-// 读取记录
 function loadRecords() {
     try {
         if (fs.existsSync(RECORDS_FILE)) {
@@ -81,7 +110,6 @@ function loadRecords() {
     return [];
 }
 
-// 写入记录
 function saveRecords(records) {
     try {
         fs.writeFileSync(RECORDS_FILE, JSON.stringify(records, null, 2), 'utf8');
@@ -104,6 +132,24 @@ function clearRecords() {
     return [];
 }
 
+// 留言板API
+app.use(express.json());
+app.get('/api/messages', (req, res) => {
+    const messages = loadMessages();
+    res.json(messages);
+});
+
+app.post('/api/messages', (req, res) => {
+    const { content } = req.body;
+    if (!content || content.trim() === '' || content.length > 15) {
+        return res.json({ success: false, message: '留言内容无效' });
+    }
+    const now = new Date();
+    const time = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    const updatedMessages = addMessage(content.trim(), time);
+    res.json({ success: true, messages: updatedMessages });
+});
+
 io.on('connection', (socket) => {
     console.log(`✅ 用户连接: ${socket.id}`);
 
@@ -118,7 +164,6 @@ io.on('connection', (socket) => {
             identity = data.identity;
         }
         
-        // 离开旧房间
         const oldRoom = socketRoom.get(socket.id);
         if (oldRoom) {
             const oldRoomSet = rooms.get(oldRoom);
@@ -152,7 +197,6 @@ io.on('connection', (socket) => {
         
         const identities = roomIdentities.get(roomId);
         
-        // 身份冲突检测
         if (identity && identities && identities.has(identity)) {
             if (callback) {
                 callback({ success: false, message: `身份冲突：${identity} 已经在房间中` });
@@ -160,13 +204,11 @@ io.on('connection', (socket) => {
             return;
         }
         
-        // 房间人数限制
         if (roomSet.size >= 2) {
             if (callback) callback({ success: false, message: '房间已满 (最多2人)' });
             return;
         }
         
-        // 加入房间
         roomSet.add(socket.id);
         socketRoom.set(socket.id, roomId);
         if (identity && identities) {
@@ -178,7 +220,6 @@ io.on('connection', (socket) => {
         console.log(`用户 ${socket.id} (${identity}) 加入房间 ${roomId}，当前人数 ${currentCount}`);
         io.to(roomId).emit('room-users', { roomId, count: currentCount });
         
-        // 如果两人都在线，检查并发送离线期间错过的想念
         if (currentCount === 2 && identity) {
             const partnerIdentity = (identity === "周周") ? "小汪" : "周周";
             const offlineMisses = getAndClearOfflineMisses(identity, partnerIdentity);
@@ -229,15 +270,12 @@ io.on('connection', (socket) => {
         const isPartnerOnline = roomSet && roomSet.size === 2;
         
         if (isPartnerOnline) {
-            // 对方在线，直接发送实时通知（带烟花特效）
             socket.to(roomId).emit('someone-missed', { from, time, isOnline: true });
             console.log(`💕 ${from} 发送了想念（对方在线，实时通知）`);
         } else {
-            // 对方离线，保存离线消息
             const to = (from === "周周") ? "小汪" : "周周";
             const count = addOfflineMiss(from, to, time);
             console.log(`💾 ${from} 发送了想念（对方离线，已保存，累计${count}条）`);
-            // 通知发送方：对方离线，已保存
             socket.emit('miss-saved-offline', { to, time, count });
         }
     });
@@ -279,4 +317,5 @@ server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 服务器运行在 http://0.0.0.0:${PORT}`);
     console.log(`📁 记录文件位置: ${RECORDS_FILE}`);
     console.log(`📁 离线消息文件位置: ${OFFLINE_MSGS_FILE}`);
+    console.log(`📁 留言板文件位置: ${MESSAGES_FILE}`);
 });

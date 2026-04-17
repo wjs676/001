@@ -69,6 +69,125 @@
             padding-bottom: 4px;
         }
 
+        /* 左侧消息盒子图标 */
+        .message-icon {
+            position: fixed;
+            left: 20px;
+            bottom: 20px;
+            width: 55px;
+            height: 55px;
+            background: #ff8a5c;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            font-size: 28px;
+        }
+        .message-icon:hover {
+            transform: scale(1.05);
+            background: #ff6b3c;
+        }
+
+        /* 留言板侧边栏 */
+        .message-board {
+            position: fixed;
+            left: -320px;
+            top: 0;
+            width: 300px;
+            height: 100vh;
+            background: #fff9f5;
+            box-shadow: 2px 0 20px rgba(0,0,0,0.1);
+            z-index: 1001;
+            transition: left 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            border-right: 2px solid #ffcdb5;
+        }
+        .message-board.open {
+            left: 0;
+        }
+        .message-header {
+            background: #ff8a5c;
+            color: white;
+            padding: 20px 15px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .message-header .close-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+        .message-list {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .message-item {
+            background: #ffefe4;
+            padding: 10px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            color: #6d3b21;
+            word-break: break-word;
+            border-left: 3px solid #ff8a5c;
+        }
+        .message-time {
+            font-size: 0.65rem;
+            color: #b97f5e;
+            margin-top: 5px;
+            display: block;
+        }
+        .message-input-area {
+            padding: 15px;
+            border-top: 1px solid #ffdecb;
+            display: flex;
+            gap: 8px;
+        }
+        .message-input-area input {
+            flex: 1;
+            padding: 10px 12px;
+            border: 2px solid #ffcdb5;
+            border-radius: 30px;
+            font-size: 0.85rem;
+            outline: none;
+        }
+        .message-input-area input:focus {
+            border-color: #ff8a5c;
+        }
+        .message-input-area button {
+            background: #ff8a5c;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 30px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .message-input-area button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .empty-messages {
+            text-align: center;
+            color: #c68b6b;
+            padding: 30px;
+            font-style: italic;
+        }
+
+        /* 登录区 */
         .login-overlay {
             background: rgba(0,0,0,0.03);
             border-radius: 48px;
@@ -104,6 +223,16 @@
             border-color: #ff8a5c;
             color: white;
             box-shadow: 0 6px 12px rgba(255, 100, 50, 0.3);
+        }
+        .name-btn.guest {
+            background: #e8d5c5;
+            border-color: #d4b89c;
+            color: #8b5a3e;
+        }
+        .name-btn.guest.active {
+            background: #b89a7a;
+            border-color: #b89a7a;
+            color: white;
         }
         .confirm-login {
             margin-top: 20px;
@@ -333,6 +462,27 @@
 <body>
 <canvas id="fireworks-canvas"></canvas>
 <div class="notification-container" id="notificationContainer"></div>
+
+<!-- 左侧消息盒子图标 -->
+<div class="message-icon" id="messageIcon">
+    💬
+</div>
+
+<!-- 留言板侧边栏 -->
+<div class="message-board" id="messageBoard">
+    <div class="message-header">
+        📝 访客留言板
+        <button class="close-btn" id="closeMessageBoard">×</button>
+    </div>
+    <div class="message-list" id="messageList">
+        <div class="empty-messages">✨ 暂无留言，访客可以留下祝福 ✨</div>
+    </div>
+    <div class="message-input-area">
+        <input type="text" id="messageInput" maxlength="15" placeholder="写点什么吧... (最多15字)">
+        <button id="sendMessageBtn">发送</button>
+    </div>
+</div>
+
 <div class="card" id="app">
     <h1>💕双鸣蝉 💕</h1>
     <div class="sub">爱你的话说过千万遍 句句有回音</div>
@@ -342,9 +492,10 @@
         <div class="name-buttons">
             <button class="name-btn" data-name="周周">🐣 我是周周</button>
             <button class="name-btn" data-name="小汪">🐶 我是小汪</button>
+            <button class="name-btn guest" data-name="访客">👤 谁也不是</button>
         </div>
         <button class="confirm-login" id="confirmLoginBtn">✨ 确认✨</button>
-        <div style="font-size:0.7rem; margin-top:12px; color:#b97f5e;">💡 选择身份，查看ta是否在线</div>
+        <div style="font-size:0.7rem; margin-top:12px; color:#b97f5e;">💡 请对号入座哦</div>
     </div>
 
     <div id="mainContent" style="display: none;">
@@ -460,6 +611,66 @@
         }
     }
 
+    // ========== 小丑特效 ==========
+    function showClownFirework() {
+        const x = canvas.width / 2;
+        const y = canvas.height / 2;
+        const colors = ['#ffcc00', '#ff9900', '#ff6600', '#ff3300', '#ffff00'];
+        const clownCount = 80;
+        for (let i = 0; i < clownCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 2 + Math.random() * 6;
+            const vx = Math.cos(angle) * speed * (Math.random() * 1.5);
+            const vy = Math.sin(angle) * speed * (Math.random() * 1.5);
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            particles.push(new ClownParticle(x, y, vx, vy, color));
+        }
+        if (!animationId) {
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles = particles.filter(p => p.update());
+                particles.forEach(p => p.draw());
+                if (particles.length > 0) {
+                    animationId = requestAnimationFrame(animate);
+                } else {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+            animate();
+        }
+    }
+
+    class ClownParticle {
+        constructor(x, y, vx, vy, color) {
+            this.x = x;
+            this.y = y;
+            this.vx = vx;
+            this.vy = vy;
+            this.color = color;
+            this.alpha = 1;
+            this.size = 10;
+            this.gravity = 0.12;
+        }
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.vy += this.gravity;
+            this.alpha -= 0.02;
+            this.size *= 0.98;
+            return this.alpha > 0;
+        }
+        draw() {
+            ctx.save();
+            ctx.globalAlpha = this.alpha;
+            ctx.font = `${this.size}px "Segoe UI Emoji", "Apple Color Emoji"`;
+            ctx.fillStyle = this.color;
+            ctx.fillText('🤡', this.x, this.y);
+            ctx.restore();
+        }
+    }
+
     // ========== 通知队列系统 ==========
     let notificationQueue = [];
     let isShowingNotification = false;
@@ -504,11 +715,82 @@
         }, duration);
     }
 
+    // ========== 留言板功能 ==========
+    let messages = [];
+    
+    function loadMessages() {
+        fetch('/api/messages')
+            .then(res => res.json())
+            .then(data => {
+                messages = data;
+                renderMessages();
+            })
+            .catch(err => console.error('加载留言失败:', err));
+    }
+    
+    function renderMessages() {
+        const container = document.getElementById('messageList');
+        if (!container) return;
+        if (!messages || messages.length === 0) {
+            container.innerHTML = '<div class="empty-messages">✨ 暂无留言，访客可以留下祝福 ✨</div>';
+            return;
+        }
+        const sorted = [...messages].sort((a,b) => b.timestamp - a.timestamp);
+        container.innerHTML = sorted.map(msg => `
+            <div class="message-item">
+                ${escapeHtml(msg.content)}
+                <span class="message-time">${msg.time}</span>
+            </div>
+        `).join('');
+    }
+    
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
+    function sendMessage(content) {
+        if (!content || content.trim() === '') {
+            addNotification('💬 留言内容不能为空', 'info', 1500);
+            return;
+        }
+        if (content.length > 15) {
+            addNotification('💬 留言不能超过15个字', 'info', 1500);
+            return;
+        }
+        if (currentUser !== '访客') {
+            addNotification('💬 只有访客身份可以发送留言哦', 'info', 2000);
+            return;
+        }
+        
+        fetch('/api/messages', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content: content.trim() })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                messages = data.messages;
+                renderMessages();
+                addNotification('📝 留言已发送！', 'info', 1500);
+                // 触发小丑特效
+                showClownFirework();
+                document.getElementById('messageInput').value = '';
+            } else {
+                addNotification('❌ 发送失败', 'info', 1500);
+            }
+        })
+        .catch(err => console.error('发送留言失败:', err));
+    }
+
     // ========== 应用逻辑 ==========
     let currentUser = null;
     let socket = null;
     let isConnected = false;
     let isPartnerOnline = false;
+    let isGuest = false;
     const ROOM_ID = "zhouzhou_xiaowang_forever";
     let partnerName = "";
 
@@ -530,6 +812,13 @@
         const peerDot = document.getElementById('peerDot');
         const peerStatusText = document.getElementById('peerStatusText');
         const peerStatusMsg = document.getElementById('peerStatusMsg');
+        
+        if (isGuest) {
+            peerDot.className = "peer-dot offline";
+            peerStatusText.innerText = "访客模式";
+            peerStatusMsg.innerText = `👤 你是访客身份，可以留言，但不能点击按钮哦`;
+            return;
+        }
         
         if (!partnerName) {
             partnerName = (currentUser === "周周") ? "小汪" : "周周";
@@ -581,7 +870,7 @@
     }
 
     function loadHistory() {
-        if (!socket || !isConnected) return;
+        if (!socket || !isConnected || isGuest) return;
         socket.emit('get-records', (response) => {
             if (response && response.success) {
                 renderRecords(response.records);
@@ -590,8 +879,8 @@
     }
 
     function addRecordToBackend(from, to, time, timestamp, callback) {
-        if (!socket || !isConnected) {
-            showToast("❌ 未连接服务器，无法记录", 1500);
+        if (!socket || !isConnected || isGuest) {
+            showToast("❌ 访客不能发送想念", 1500);
             if (callback) callback(false);
             return;
         }
@@ -607,6 +896,10 @@
     }
 
     function sendMiss() {
+        if (isGuest) {
+            showToast("👤 访客身份不能发送想念哦~", 1500);
+            return;
+        }
         if (!socket || !isConnected) {
             showToast("❌ 网络未连接，请刷新页面重试", 1500);
             return;
@@ -639,13 +932,36 @@
         if (isConnected) {
             connDot.className = "status-dot online";
             connText.innerText = "已连接";
-            if (missButton) missButton.disabled = false;
+            if (missButton && !isGuest) missButton.disabled = false;
+            if (missButton && isGuest) missButton.disabled = true;
         } else {
             connDot.className = "status-dot offline";
             connText.innerText = "未连接";
             if (missButton) missButton.disabled = true;
         }
         updatePartnerStatusUI();
+    }
+
+    // 留言板UI控制
+    function initMessageBoard() {
+        const icon = document.getElementById('messageIcon');
+        const board = document.getElementById('messageBoard');
+        const closeBtn = document.getElementById('closeMessageBoard');
+        const sendBtn = document.getElementById('sendMessageBtn');
+        const input = document.getElementById('messageInput');
+        
+        icon.onclick = () => {
+            board.classList.add('open');
+        };
+        closeBtn.onclick = () => {
+            board.classList.remove('open');
+        };
+        sendBtn.onclick = () => {
+            sendMessage(input.value);
+        };
+        input.onkeypress = (e) => {
+            if (e.key === 'Enter') sendMessage(input.value);
+        };
     }
 
     function setupLogin() {
@@ -661,20 +977,36 @@
         });
         confirmBtn.addEventListener('click', () => {
             if (!selectedName) {
-                alert("请先选择你是周周还是小汪～");
+                alert("请先选择身份～");
                 return;
             }
             currentUser = selectedName;
-            partnerName = (currentUser === "周周") ? "小汪" : "周周";
+            isGuest = (currentUser === "访客");
+            if (!isGuest) {
+                partnerName = (currentUser === "周周") ? "小汪" : "周周";
+            }
             document.getElementById('loginPanel').style.display = 'none';
             document.getElementById('mainContent').style.display = 'block';
             document.getElementById('currentUserLabel').innerText = currentUser;
-            document.getElementById('peerNameLabel').innerText = partnerName;
+            if (!isGuest) {
+                document.getElementById('peerNameLabel').innerText = partnerName;
+            } else {
+                document.getElementById('peerNameLabel').innerText = "访客";
+            }
             initSocketAfterLogin();
         });
     }
 
     function initSocketAfterLogin() {
+        if (isGuest) {
+            // 访客不需要socket连接，直接显示界面
+            isConnected = true;
+            updateConnectionUI();
+            showToast("👤 访客模式，可以浏览留言板", 2000);
+            loadMessages();
+            return;
+        }
+        
         const socketUrl = window.location.origin;
         socket = io(socketUrl, {
             transports: ['websocket', 'polling'],
@@ -724,8 +1056,6 @@
         socket.on('offline-misses', (data) => {
             const { count, misses } = data;
             addNotification(`💌 你离线期间收到了 ${count} 次想念`, 'miss', 5000);
-            // 汇总显示所有离线想念
-            const missList = misses.map(m => `• ${m.time}`).join('\n');
             loadHistory();
         });
         
@@ -771,9 +1101,12 @@
         
         const missBtn = document.getElementById('missButton');
         if (missBtn) missBtn.onclick = () => sendMiss();
+        
+        loadMessages();
     }
     
     setupLogin();
+    initMessageBoard();
 </script>
 </body>
 </html>
