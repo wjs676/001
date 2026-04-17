@@ -17,9 +17,9 @@ const io = new Server(server, {
 const RECORDS_FILE = path.join(__dirname, 'records.txt');
 
 // 存储房间信息
-const rooms = new Map();        // roomId -> Set of socket ids
-const socketRoom = new Map();   // socketId -> roomId
-const roomIdentities = new Map(); // roomId -> Map of identity -> socketId (用于身份冲突检测)
+const rooms = new Map();              // roomId -> Set of socket ids
+const socketRoom = new Map();        // socketId -> roomId
+const roomIdentities = new Map();    // roomId -> Map of identity -> socketId (用于身份冲突检测)
 
 // 读取记录
 function loadRecords() {
@@ -63,10 +63,11 @@ function clearRecords() {
 io.on('connection', (socket) => {
     console.log(`✅ 用户连接: ${socket.id}`);
 
-    // 加入房间（增加身份校验）
+    // 加入房间（支持身份校验）
     socket.on('join-room', (data, callback) => {
-        // 兼容旧版调用：可能是 (roomId, callback) 或 ({roomId, identity}, callback)
         let roomId, identity, callbackFunc;
+        
+        // 兼容两种调用方式
         if (typeof data === 'string') {
             roomId = data;
             identity = null;
@@ -97,14 +98,18 @@ io.on('connection', (socket) => {
         if (!roomSet) {
             roomSet = new Set();
             rooms.set(roomId, roomSet);
-            roomIdentities.set(roomId, new Map()); // 初始化身份映射
+            roomIdentities.set(roomId, new Map());
         }
 
-        // 身份冲突检测（如果提供了identity）
+        // 身份冲突检测（核心功能：防止同一身份重复登录）
         const identities = roomIdentities.get(roomId);
         if (identity && identities && identities.has(identity)) {
-            // 同一身份已经在房间中，拒绝加入
-            if (callbackFunc) callbackFunc({ success: false, message: `身份冲突：${identity} 已经在房间中，不能重复加入` });
+            if (callbackFunc) {
+                callbackFunc({ 
+                    success: false, 
+                    message: `身份冲突：${identity} 已经在房间中，不能重复加入` 
+                });
+            }
             return;
         }
 
