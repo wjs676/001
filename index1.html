@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>双鸣蝉 | 在线状态</title>
+    <title>双鸣蝉</title>
     <style>
         * {
             box-sizing: border-box;
@@ -109,7 +109,7 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
-        /* 状态区 - 增强版 */
+        /* 状态区 */
         .status-panel {
             background: #fff6ef;
             border-radius: 48px;
@@ -123,7 +123,7 @@
             justify-content: center;
             gap: 12px;
             flex-wrap: wrap;
-            margin-bottom: 12px;
+            margin-bottom: 8px;
         }
         .status-badge {
             display: inline-flex;
@@ -140,56 +140,9 @@
             height: 10px;
             border-radius: 10px;
             background: #ccc;
-            transition: all 0.2s;
         }
         .status-dot.online { background: #2ecc71; box-shadow: 0 0 6px #2ecc71; }
         .status-dot.offline { background: #e74c3c; }
-        
-        /* 对方在线状态专用区域 */
-        .peer-status-area {
-            background: #ffede3;
-            border-radius: 40px;
-            padding: 12px 16px;
-            margin-top: 8px;
-            text-align: center;
-        }
-        .peer-status-text {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-        .peer-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 12px;
-            transition: all 0.2s;
-        }
-        .peer-dot.online {
-            background: #2ecc71;
-            box-shadow: 0 0 8px #2ecc71;
-            animation: pulse 1.5s infinite;
-        }
-        .peer-dot.offline {
-            background: #e74c3c;
-        }
-        @keyframes pulse {
-            0% { opacity: 0.6; transform: scale(0.9); }
-            100% { opacity: 1; transform: scale(1.2); }
-            100% { opacity: 0.6; transform: scale(0.9); }
-        }
-        .peer-name {
-            color: #c25d38;
-            font-weight: 700;
-        }
-        .peer-status-msg {
-            font-size: 0.75rem;
-            color: #b97f5e;
-            margin-top: 5px;
-        }
-        
         .info-text {
             background: #ffefe4;
             border-radius: 50px;
@@ -318,7 +271,7 @@
     <h1>💕双鸣蝉 💕</h1>
     <div class="sub">爱你的话说过千万遍 句句有回音</div>
 
-    <!-- 登录区块 -->
+    <!-- 登录区块：必须选择我是周周还是小汪 -->
     <div class="login-overlay" id="loginPanel">
         <div class="login-title">🌸 hello！是谁来了呀🌸</div>
         <div class="name-buttons">
@@ -326,10 +279,10 @@
             <button class="name-btn" data-name="小汪">🐶 我是小汪</button>
         </div>
         <button class="confirm-login" id="confirmLoginBtn">✨ 确认✨</button>
-        <div style="font-size:0.7rem; margin-top:12px; color:#b97f5e;">💡 选择身份后，可以实时看到对方在线状态</div>
+        <div style="font-size:0.7rem; margin-top:12px; color:#b97f5e;">💡 选择身份后，记录会以你的视角展示文字</div>
     </div>
 
-    <!-- 主内容区 -->
+    <!-- 主内容区（登录后可见） -->
     <div id="mainContent" style="display: none;">
         <!-- 状态栏 -->
         <div class="status-panel">
@@ -337,18 +290,10 @@
                 <div class="status-badge"><span class="status-dot" id="connDot"></span><span id="connText">连接中...</span></div>
                 <div class="status-badge"><span>👤</span><span id="currentUserLabel">未登录</span></div>
             </div>
-            
-            <!-- 对方在线状态显示区域（核心新增） -->
-            <div class="peer-status-area" id="peerStatusArea">
-                <div class="peer-status-text">
-                    <span class="peer-dot" id="peerDot"></span>
-                    <span>💕 <span id="peerNameLabel" class="peer-name">对方</span> <span id="peerStatusText">状态未知</span></span>
-                </div>
-                <div class="peer-status-msg" id="peerStatusMsg">✨ 连接服务器中...</div>
-            </div>
+            <div class="info-text" id="connHint">✨ 已连接服务器，ta现在正在想你 ✨</div>
         </div>
 
-        <!-- 想念按钮 -->
+        <!-- 想念按钮 - 无需等待对方在线 -->
         <div class="miss-area">
             <button class="miss-btn" id="missButton">
                 <span>💗</span>
@@ -361,12 +306,13 @@
         <div class="records-area">
             <div class="records-title">
                 📜 双鸣蝉说
+          <!--      <button id="clearRecordsBtn" class="clear-btn">🗑️ 清空记录</button>-->
             </div>
             <div id="recordList" class="record-list">
                 <div class="empty-records">✨ 暂无想念记录，点击按钮留下第一份想念吧 ✨</div>
             </div>
         </div>
-        <footer>⚡ 每次点击都会记录。对方在线时会实时收到提醒，对方离线时心意永存。</footer>
+        <footer>⚡ 每次点击都会记录。无需对方在线，心意永存。</footer>
     </div>
 </div>
 <div id="toastMsg" class="toast-msg" style="opacity:0;">💬</div>
@@ -376,11 +322,7 @@
     let currentUser = null;          // "周周" 或 "小汪"
     let socket = null;
     let isConnected = false;
-    let isPartnerOnline = false;     // 对方是否在线（房间内人数=2）
-    const ROOM_ID = "zhouzhou_xiaowang_forever";
-    
-    // 对方的名字（用于显示）
-    let partnerName = "";
+    const ROOM_ID = "zhouzhou_xiaowang_forever";   // 固定房间（用于同步记录）
 
     // ---------- 辅助函数 ----------
     function showToast(msg, duration = 2000) {
@@ -397,36 +339,7 @@
         return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
     }
 
-    // 更新对方在线状态的UI
-    function updatePartnerStatusUI() {
-        const peerDot = document.getElementById('peerDot');
-        const peerStatusText = document.getElementById('peerStatusText');
-        const peerStatusMsg = document.getElementById('peerStatusMsg');
-        
-        if (!partnerName) {
-            partnerName = (currentUser === "周周") ? "小汪" : "周周";
-            document.getElementById('peerNameLabel').innerText = partnerName;
-        }
-        
-        if (!isConnected) {
-            peerDot.className = "peer-dot offline";
-            peerStatusText.innerText = "连接异常";
-            peerStatusMsg.innerText = "⚠️ 服务器连接失败，请刷新页面";
-            return;
-        }
-        
-        if (isPartnerOnline) {
-            peerDot.className = "peer-dot online";
-            peerStatusText.innerText = "在线 💕";
-            peerStatusMsg.innerText = `✨ ${partnerName} 也在线，快去传递思念吧 ✨`;
-        } else {
-            peerDot.className = "peer-dot offline";
-            peerStatusText.innerText = "离线";
-            peerStatusMsg.innerText = `⏳ ${partnerName} 暂时不在线，你的心意会被保存，TA上线后就能看到~`;
-        }
-    }
-
-    // 根据当前登录人生成展示文案
+    // 根据当前登录人 生成展示文案
     function generateMessage(record) {
         const { from, to, time } = record;
         if (currentUser === "周周") {
@@ -453,6 +366,7 @@
             container.innerHTML = '<div class="empty-records">📭 你们还没有互相牵挂，快点击按钮留下第一份牵挂～</div>';
             return;
         }
+        // 按时间倒序（最新的在上面）
         const sorted = [...records].sort((a,b) => b.timestamp - a.timestamp);
         container.innerHTML = sorted.map(rec => {
             const msg = generateMessage(rec);
@@ -462,17 +376,23 @@
 
     // 加载历史记录
     function loadHistory() {
-        if (!socket || !isConnected) return;
+        if (!socket || !isConnected) {
+            console.warn("未连接，无法加载历史");
+            return;
+        }
         socket.emit('get-records', (response) => {
             if (response && response.success) {
                 const records = response.records || [];
                 window.recordsData = records;
                 renderRecords(records);
+                console.log(`📚 加载了 ${records.length} 条想念记录`);
+            } else {
+                console.error("加载历史记录失败");
             }
         });
     }
 
-    // 添加新记录
+    // 添加一条新记录
     function addRecordToBackend(from, to, time, timestamp, callback) {
         if (!socket || !isConnected) {
             showToast("❌ 未连接服务器，无法记录", 1500);
@@ -486,13 +406,32 @@
                 showToast(`📝 已记录：${from} 想念 ${to}`, 1500);
                 if (callback) callback(true);
             } else {
-                showToast(`❌ 记录失败`, 2000);
+                showToast(`❌ 记录失败: ${response?.message || '未知错误'}`, 2000);
                 if (callback) callback(false);
             }
         });
     }
 
-    // 发送想念
+    // 清空记录
+    function clearAllRecords() {
+        if (!socket || !isConnected) {
+            showToast("未连接服务器，无法清空", 1500);
+            return;
+        }
+        if (confirm("⚠️ 确定要清空所有想念记录吗？此操作不可恢复。")) {
+            socket.emit('clear-records', (response) => {
+                if (response && response.success) {
+                    window.recordsData = [];
+                    renderRecords([]);
+                    showToast("🗑️ 所有记录已清空", 1500);
+                } else {
+                    showToast("清空失败", 1500);
+                }
+            });
+        }
+    }
+
+    // 发送想念（核心：只要连接服务器，无需对方在线）
     function sendMiss() {
         if (!socket || !isConnected) {
             showToast("❌ 网络未连接，请刷新页面重试", 1500);
@@ -506,20 +445,17 @@
         const nowTime = formatTime();
         const timestamp = Date.now();
         
+        // 存储记录到后端txt (服务器写入文件)
         addRecordToBackend(currentUser, target, nowTime, timestamp, (success) => {
             if (success) {
+                // 可选：额外发送一个提醒事件给对方（如果对方在线会收到弹窗，但不需要对方在线也能记录）
+                // 为了让体验更好，如果对方在线则实时弹窗；如果不在线，记录也会保存，对方下次打开能看到。
                 socket.emit('miss-notify', { roomId: ROOM_ID, from: currentUser, time: nowTime });
-                // 如果对方在线，给予额外提示
-                if (isPartnerOnline) {
-                    showToast(`💖 已向${target}传递思念，TA会收到提醒`, 1500);
-                } else {
-                    showToast(`💖 思念已记录，${target}上线后会看到`, 1500);
-                }
             }
         });
     }
 
-    // 更新连接UI
+    // 更新UI连接状态
     function updateConnectionUI() {
         const connDot = document.getElementById('connDot');
         const connText = document.getElementById('connText');
@@ -534,7 +470,6 @@
             connText.innerText = "未连接";
             if (missButton) missButton.disabled = true;
         }
-        updatePartnerStatusUI();
     }
 
     // 登录逻辑
@@ -555,16 +490,15 @@
                 return;
             }
             currentUser = selectedName;
-            partnerName = (currentUser === "周周") ? "小汪" : "周周";
             document.getElementById('loginPanel').style.display = 'none';
             document.getElementById('mainContent').style.display = 'block';
             document.getElementById('currentUserLabel').innerText = currentUser;
-            document.getElementById('peerNameLabel').innerText = partnerName;
+            // 登录后初始化socket连接
             initSocketAfterLogin();
         });
     }
 
-    // 登录后连接socket
+    // 登录后才连接socket
     function initSocketAfterLogin() {
         const socketUrl = window.location.origin;
         socket = io(socketUrl, {
@@ -575,21 +509,17 @@
         socket.on('connect', () => {
             isConnected = true;
             updateConnectionUI();
-            showToast("✅ 连接成功", 1500);
-            
+            console.log("✅ 服务器连接成功");
+            showToast("✅ 连接成功，开始记录你们之前的牵挂吧", 1500);
+            // 加入固定房间（用于记录同步和可选通知）
             socket.emit('join-room', ROOM_ID, (resp) => {
                 if (resp && resp.success) {
-                    // 初始人数决定对方是否在线
-                    isPartnerOnline = (resp.count === 2);
-                    updatePartnerStatusUI();
+                    console.log(`加入房间成功，当前人数 ${resp.count}`);
+                    // 加载历史记录
                     loadHistory();
-                    
-                    if (resp.count === 2) {
-                        showToast(`🎉 ${partnerName} 在线！可以开始传递思念了`, 2000);
-                    } else {
-                        showToast(`⏳ ${partnerName} 暂时不在线，等待TA上线~`, 2000);
-                    }
                 } else {
+                    console.warn("房间加入失败，但记录功能仍可用");
+                    // 即使加入房间失败，仍可单独获取记录（但为了保险，单独再请求一次）
                     loadHistory();
                 }
             });
@@ -597,61 +527,55 @@
         
         socket.on('disconnect', () => {
             isConnected = false;
-            isPartnerOnline = false;
             updateConnectionUI();
-            showToast("⚠️ 连接断开", 2000);
+            console.log("⚠️ 与服务器断开连接");
+            showToast("⚠️ 连接断开，请刷新页面", 2000);
         });
         
-        socket.on('connect_error', () => {
+        socket.on('connect_error', (err) => {
             isConnected = false;
-            isPartnerOnline = false;
             updateConnectionUI();
-            showToast("❌ 无法连接服务器", 3000);
+            console.error("连接错误:", err);
+            showToast("❌ 无法连接服务器，请检查后端是否运行", 3000);
         });
         
-        // 监听房间人数变化（核心：对方上线/下线实时更新状态）
-        socket.on('room-users', (data) => {
-            if (data.roomId === ROOM_ID) {
-                const wasOnline = isPartnerOnline;
-                isPartnerOnline = (data.count === 2);
-                updatePartnerStatusUI();
-                
-                if (data.count === 2 && !wasOnline) {
-                    showToast(`🎉 ${partnerName} 上线啦！快点击按钮传递思念吧~`, 3000);
-                    // 播放一个轻微的提示音效感（震动感）
-                } else if (data.count === 1 && wasOnline) {
-                    showToast(`💔 ${partnerName} 暂时离开了，你的心意会被保存`, 3000);
-                }
-            }
-        });
-        
-        // 监听对方发来的想念通知
+        // 监听对方发来的想念通知（如果对方在线，会实时弹窗，同时记录已经保存）
         socket.on('someone-missed', (data) => {
             const { from, time } = data || {};
             if (from && from !== currentUser) {
+                const targetName = (currentUser === "周周") ? "小汪" : "周周";
+                // 如果对方想念的对象是我
                 if ((from === "周周" && currentUser === "小汪") || (from === "小汪" && currentUser === "周周")) {
                     alert(`💌 ${from} 在 ${time} 想你了，快去回应吧 💌`);
                     showToast(`💖 ${from} 想你了！`, 2000);
+                    // 刷新记录，确保看到最新记录
                     loadHistory();
                 }
             } else if (!from) {
+                // 兼容旧版通知
                 alert("💌 对方想你了一次 💌");
                 loadHistory();
             }
         });
         
-        // 监听记录更新
+        // 监听记录更新（双方同步）
         socket.on('records-updated', (data) => {
             if (data && data.records) {
                 window.recordsData = data.records;
                 renderRecords(window.recordsData);
+                console.log("📡 记录已同步更新");
             }
         });
+        
+        // 绑定清空按钮事件
+        const clearBtn = document.getElementById('clearRecordsBtn');
+        if (clearBtn) clearBtn.onclick = () => clearAllRecords();
         
         const missBtn = document.getElementById('missButton');
         if (missBtn) missBtn.onclick = () => sendMiss();
     }
     
+    // 初始化页面
     setupLogin();
 </script>
 </body>
