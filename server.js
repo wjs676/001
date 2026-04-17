@@ -13,15 +13,13 @@ const io = new Server(server, {
     }
 });
 
-// 数据存储文件路径
 const RECORDS_FILE = path.join(__dirname, 'records.txt');
 
-// 存储房间信息
+// 存储结构
 const rooms = new Map();              // roomId -> Set of socket ids
 const socketRoom = new Map();        // socketId -> roomId
-const roomIdentities = new Map();    // roomId -> Map of identity -> socketId (用于身份冲突检测)
+const roomIdentities = new Map();    // roomId -> Map { identity: socketId }
 
-// 读取记录
 function loadRecords() {
     try {
         if (fs.existsSync(RECORDS_FILE)) {
@@ -35,7 +33,6 @@ function loadRecords() {
     return [];
 }
 
-// 写入记录
 function saveRecords(records) {
     try {
         fs.writeFileSync(RECORDS_FILE, JSON.stringify(records, null, 2), 'utf8');
@@ -46,7 +43,6 @@ function saveRecords(records) {
     }
 }
 
-// 添加新记录
 function addRecord(record) {
     const records = loadRecords();
     records.push(record);
@@ -54,7 +50,6 @@ function addRecord(record) {
     return records;
 }
 
-// 清空记录
 function clearRecords() {
     saveRecords([]);
     return [];
@@ -65,20 +60,22 @@ io.on('connection', (socket) => {
 
     // 加入房间（支持身份校验）
     socket.on('join-room', (data, callback) => {
-        let roomId, identity, callbackFunc;
+        console.log(`收到 join-room 请求:`, data, `socketId: ${socket.id}`);
+        
+        let roomId, identity;
         
         // 兼容两种调用方式
         if (typeof data === 'string') {
             roomId = data;
             identity = null;
-            callbackFunc = callback;
         } else {
             roomId = data.roomId;
             identity = data.identity;
-            callbackFunc = callback;
         }
         
-        // 离开旧房间
+        console.log(`解析后: roomId=${roomId}, identity=${identity}`);
+        
+        // 1. 先离开旧房间
         const oldRoom = socketRoom.get(socket.id);
         if (oldRoom) {
             const oldRoomSet = rooms.get(oldRoom);
@@ -88,38 +85,54 @@ io.on('connection', (socket) => {
                     rooms.delete(oldRoom);
                     roomIdentities.delete(oldRoom);
                 } else {
+                    // 清理旧房间的身份映射
+                    const oldIdentities = roomIdentities.get(oldRoom);
+                    if (oldIdentities) {
+                        for (let [idKey, idValue] of oldIdentities.entries()) {
+                            if (idValue === socket.id) {
+                                oldIdentities.delete(idKey);
+                                break;
+                            }
+                        }
+                    }
                     io.to(oldRoom).emit('room-users', { roomId: oldRoom, count: oldRoomSet.size });
                 }
             }
             socketRoom.delete(socket.id);
         }
-
+        
+        // 2. 获取或创建房间
         let roomSet = rooms.get(roomId);
         if (!roomSet) {
             roomSet = new Set();
             rooms.set(roomId, roomSet);
             roomIdentities.set(roomId, new Map());
         }
-
-        // 身份冲突检测（核心功能：防止同一身份重复登录）
+        
         const identities = roomIdentities.get(roomId);
+        
+        // 3. 【关键】身份冲突检测：同一身份不能重复加入
         if (identity && identities && identities.has(identity)) {
-            if (callbackFunc) {
-                callbackFunc({ 
+            console.log(`❌ 身份冲突: ${identity} 已经在房间中，拒绝 ${socket.id} 加入`);
+            if (callback) {
+                callback({ 
                     success: false, 
                     message: `身份冲突：${identity} 已经在房间中，不能重复加入` 
                 });
             }
             return;
         }
-
-        // 限制最多2人
+        
+        // 4. 房间人数限制（最多2人）
         if (roomSet.size >= 2) {
-            if (callbackFunc) callbackFunc({ success: false, message: '房间已满 (最多2人)' });
+            console.log(`❌ 房间已满: ${roomId} 已有 ${roomSet.size} 人，拒绝 ${socket.id} 加入`);
+            if (callback) {
+                callback({ success: false, message: '房间已满 (最多2人)' });
+            }
             return;
         }
-
-        // 加入房间
+        
+        // 5. 加入房间
         roomSet.add(socket.id);
         socketRoom.set(socket.id, roomId);
         if (identity && identities) {
@@ -127,19 +140,25 @@ io.on('connection', (socket) => {
         }
         socket.join(roomId);
         const currentCount = roomSet.size;
-
-        console.log(`用户 ${socket.id} 加入房间 ${roomId}，身份: ${identity || '未知'}，当前人数 ${currentCount}`);
+        
+        console.log(`✅ 用户 ${socket.id} (${identity || '未知'}) 加入房间 ${roomId}，当前人数 ${currentCount}`);
+        console.log(`当前房间身份映射:`, Array.from(identities.entries()));
+        
+        // 6. 广播人数变化
         io.to(roomId).emit('room-users', { roomId, count: currentCount });
-
-        if (callbackFunc) callbackFunc({ success: true, count: currentCount });
+        
+        // 7. 回调成功
+        if (callback) {
+            callback({ success: true, count: currentCount });
+        }
     });
-
+    
     // 获取历史记录
     socket.on('get-records', (callback) => {
         const records = loadRecords();
         if (callback) callback({ success: true, records });
     });
-
+    
     // 新增记录
     socket.on('new-record', (data, callback) => {
         const { from, to, time, timestamp } = data;
@@ -157,7 +176,7 @@ io.on('connection', (socket) => {
         
         if (callback) callback({ success: true, records: updatedRecords });
     });
-
+    
     // 清空记录
     socket.on('clear-records', (callback) => {
         const emptyRecords = clearRecords();
@@ -166,7 +185,7 @@ io.on('connection', (socket) => {
         });
         if (callback) callback({ success: true, records: emptyRecords });
     });
-
+    
     // 发送想念通知
     socket.on('miss-notify', ({ roomId, from, time }) => {
         const curRoom = socketRoom.get(socket.id);
@@ -174,7 +193,7 @@ io.on('connection', (socket) => {
         socket.to(roomId).emit('someone-missed', { from, time });
         console.log(`💕 ${from} 发送了想念`);
     });
-
+    
     // 断开连接
     socket.on('disconnect', () => {
         const roomId = socketRoom.get(socket.id);
@@ -183,12 +202,12 @@ io.on('connection', (socket) => {
             if (roomSet) {
                 roomSet.delete(socket.id);
                 
-                // 清理身份映射
                 const identities = roomIdentities.get(roomId);
                 if (identities) {
                     for (let [identity, id] of identities.entries()) {
                         if (id === socket.id) {
                             identities.delete(identity);
+                            console.log(`🗑️ 移除身份映射: ${identity}`);
                             break;
                         }
                     }
@@ -197,6 +216,7 @@ io.on('connection', (socket) => {
                 if (roomSet.size === 0) {
                     rooms.delete(roomId);
                     roomIdentities.delete(roomId);
+                    console.log(`🗑️ 房间 ${roomId} 已清空`);
                 } else {
                     io.to(roomId).emit('room-users', { roomId, count: roomSet.size });
                 }
@@ -208,7 +228,6 @@ io.on('connection', (socket) => {
     });
 });
 
-// 提供静态文件
 app.use(express.static('public'));
 
 const PORT = process.env.PORT || 3000;
