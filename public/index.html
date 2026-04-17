@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>双鸣蝉 | 在线状态</title>
+    <title>双鸣蝉</title>
     <style>
         * {
             box-sizing: border-box;
@@ -326,7 +326,7 @@
             <button class="name-btn" data-name="小汪">🐶 我是小汪</button>
         </div>
         <button class="confirm-login" id="confirmLoginBtn">✨ 确认✨</button>
-        <div style="font-size:0.7rem; margin-top:12px; color:#b97f5e;">💡 选择身份后，可以实时看到对方在线状态</div>
+        <div style="font-size:0.7rem; margin-top:12px; color:#b97f5e;">💡 选择身份，查看ta是否在线</div>
     </div>
 
     <!-- 主内容区 -->
@@ -366,7 +366,7 @@
                 <div class="empty-records">✨ 暂无想念记录，点击按钮留下第一份想念吧 ✨</div>
             </div>
         </div>
-        <footer>⚡ 每次点击都会记录。对方在线时会实时收到提醒，对方离线时心意永存。</footer>
+        <footer>⚡ 每次点击都会记录。对方在线时会实时收到提醒，对方离线时也能心意永存。</footer>
     </div>
 </div>
 <div id="toastMsg" class="toast-msg" style="opacity:0;">💬</div>
@@ -418,7 +418,7 @@
         if (isPartnerOnline) {
             peerDot.className = "peer-dot online";
             peerStatusText.innerText = "在线 💕";
-            peerStatusMsg.innerText = `✨ ${partnerName} 也在线，快去传递思念吧 ✨`;
+            peerStatusMsg.innerText = `✨ ${partnerName} 也在线，珍惜当下吧 ✨`;
         } else {
             peerDot.className = "peer-dot offline";
             peerStatusText.innerText = "离线";
