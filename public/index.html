@@ -378,7 +378,7 @@
                 <span>💗</span>
                 <span>I MISS YOU</span>
             </button>
-            <div class="info-text" id="peerHint">💖 点击按钮记录此刻思念，对方在线时有爱心烟花！</div>
+            <div class="info-text" id="peerHint">💖 点击按钮记录此刻思念！</div>
         </div>
 
         <!-- 记录展示区 -->
@@ -517,7 +517,7 @@
         if (isPartnerOnline) {
             peerDot.className = "peer-dot online";
             peerStatusText.innerText = "在线 💕";
-            peerStatusMsg.innerText = `✨ ${partnerName} 也在线，发送想念会有爱心烟花 ✨`;
+            peerStatusMsg.innerText = `✨ ${partnerName} 也在线，珍惜当下吧 ✨`;
         } else {
             peerDot.className = "peer-dot offline";
             peerStatusText.innerText = "离线";
@@ -708,14 +708,14 @@
         socket.on('offline-misses', (data) => {
             const { count, misses } = data;
             showToast(`💌 你离线期间收到了 ${count} 次想念！`, 4000);
-            alert(`💌 你离线期间，${partnerName} 想你了 ${count} 次！\n\n${misses.map(m => `• ${m.time}`).join('\n')}`);
+            alert(`💌 你不在的时候，${partnerName} 想你了 ${count} 次！快去陪陪TA吧`);
             loadHistory();
         });
         
         // 对方离线时发送想念的反馈
         socket.on('miss-saved-offline', (data) => {
             const { to, count } = data;
-            showToast(`💾 ${to} 不在线，想念已保存 (累计${count}条)`, 2000);
+            showToast(`💾 ${to} 不在线，想念已记录 (想了${count}次)`, 2000);
         });
         
         socket.on('room-users', (data) => {
