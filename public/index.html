@@ -305,7 +305,7 @@
         <!-- 记录展示区 -->
         <div class="records-area">
             <div class="records-title">
-                📜 想念时光轴
+                📜 双鸣蝉说
           <!--      <button id="clearRecordsBtn" class="clear-btn">🗑️ 清空记录</button>-->
             </div>
             <div id="recordList" class="record-list">
@@ -344,15 +344,15 @@
         const { from, to, time } = record;
         if (currentUser === "周周") {
             if (from === "周周" && to === "小汪") {
-                return `💘 双鸣蝉：你在想小汪`;
+                return `💘 你在想小汪，为什么不直接找他`;
             } else if (from === "小汪" && to === "周周") {
-                return `💞 双鸣蝉：小汪在想你`;
+                return `💞 小汪在想你，快去回应他`;
             }
         } else if (currentUser === "小汪") {
             if (from === "小汪" && to === "周周") {
-                return `💘 双鸣蝉：你在想周周`;
+                return `💘 你在想周周，为什么不直接找她`;
             } else if (from === "周周" && to === "小汪") {
-                return `💞 双鸣蝉：周周在想你`;
+                return `💞 周周在想你，快去回应她`;
             }
         }
         return `${from} → ${to} at ${time}`;
@@ -363,7 +363,7 @@
         const container = document.getElementById('recordList');
         if (!container) return;
         if (!records || records.length === 0) {
-            container.innerHTML = '<div class="empty-records">📭 还没有想念记录，快点击按钮留下第一份想念～</div>';
+            container.innerHTML = '<div class="empty-records">📭 你们还没有互相牵挂，快点击按钮留下第一份牵挂～</div>';
             return;
         }
         // 按时间倒序（最新的在上面）
@@ -510,7 +510,7 @@
             isConnected = true;
             updateConnectionUI();
             console.log("✅ 服务器连接成功");
-            showToast("✅ 连接成功，可以开始记录想念了", 1500);
+            showToast("✅ 连接成功，开始记录你们之前的牵挂吧", 1500);
             // 加入固定房间（用于记录同步和可选通知）
             socket.emit('join-room', ROOM_ID, (resp) => {
                 if (resp && resp.success) {
@@ -546,7 +546,7 @@
                 const targetName = (currentUser === "周周") ? "小汪" : "周周";
                 // 如果对方想念的对象是我
                 if ((from === "周周" && currentUser === "小汪") || (from === "小汪" && currentUser === "周周")) {
-                    alert(`💌 ${from} 在 ${time} 想你了一次 💌`);
+                    alert(`💌 ${from} 在 ${time} 想你了，快去回应吧 💌`);
                     showToast(`💖 ${from} 想你了！`, 2000);
                     // 刷新记录，确保看到最新记录
                     loadHistory();
