@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>双鸣蝉 | 爱心烟花</title>
+    <title>双鸣蝉</title>
     <style>
         * {
             box-sizing: border-box;
@@ -23,7 +23,6 @@
             overflow-x: hidden;
         }
 
-        /* 烟花画布 */
         #fireworks-canvas {
             position: fixed;
             top: 0;
@@ -70,13 +69,11 @@
             padding-bottom: 4px;
         }
 
-        /* 登录区 */
         .login-overlay {
             background: rgba(0,0,0,0.03);
             border-radius: 48px;
             padding: 20px 18px;
             margin-bottom: 18px;
-            transition: all 0.2s;
         }
         .login-title {
             font-weight: 700;
@@ -108,9 +105,6 @@
             color: white;
             box-shadow: 0 6px 12px rgba(255, 100, 50, 0.3);
         }
-        .name-btn:active {
-            transform: scale(0.96);
-        }
         .confirm-login {
             margin-top: 20px;
             background: #ff6b3c;
@@ -124,7 +118,6 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
 
-        /* 状态区 - 增强版 */
         .status-panel {
             background: #fff6ef;
             border-radius: 48px;
@@ -160,7 +153,6 @@
         .status-dot.online { background: #2ecc71; box-shadow: 0 0 6px #2ecc71; }
         .status-dot.offline { background: #e74c3c; }
         
-        /* 对方在线状态专用区域 */
         .peer-status-area {
             background: #ffede3;
             border-radius: 40px;
@@ -187,23 +179,13 @@
             box-shadow: 0 0 8px #2ecc71;
             animation: pulse 1.5s infinite;
         }
-        .peer-dot.offline {
-            background: #e74c3c;
-        }
+        .peer-dot.offline { background: #e74c3c; }
         @keyframes pulse {
-            0% { opacity: 0.6; transform: scale(0.9); }
+            0%, 100% { opacity: 0.6; transform: scale(0.9); }
             50% { opacity: 1; transform: scale(1.2); }
-            100% { opacity: 0.6; transform: scale(0.9); }
         }
-        .peer-name {
-            color: #c25d38;
-            font-weight: 700;
-        }
-        .peer-status-msg {
-            font-size: 0.75rem;
-            color: #b97f5e;
-            margin-top: 5px;
-        }
+        .peer-name { color: #c25d38; font-weight: 700; }
+        .peer-status-msg { font-size: 0.75rem; color: #b97f5e; margin-top: 5px; }
         
         .info-text {
             background: #ffefe4;
@@ -214,10 +196,7 @@
             margin-top: 16px;
         }
 
-        /* 想念按钮 */
-        .miss-area {
-            margin: 20px 0 18px;
-        }
+        .miss-area { margin: 20px 0 18px; }
         .miss-btn {
             background: radial-gradient(circle at 30% 10%, #ff5e3a, #d93c1a);
             border: none;
@@ -240,9 +219,8 @@
         .miss-btn span:first-child { font-size: 3.2rem; }
         .miss-btn span:last-child { font-size: 1.2rem; letter-spacing: 2px; }
         .miss-btn:active { transform: scale(0.94); }
-        .miss-btn:disabled { opacity: 0.5; transform: none; cursor: not-allowed; }
+        .miss-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* 记录展示区 */
         .records-area {
             background: #fff4ed;
             border-radius: 32px;
@@ -274,7 +252,6 @@
             border-radius: 28px;
             color: #6d3b21;
             border: 1px solid #ffdecb;
-            font-size: 0.8rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -295,21 +272,46 @@
             padding: 20px;
             font-style: italic;
         }
-        .clear-btn {
-            background: none;
-            border: 1px solid #ffcdb5;
-            padding: 5px 12px;
-            border-radius: 30px;
-            font-size: 0.7rem;
-            color: #b45a3b;
-            cursor: pointer;
-            margin-left: auto;
-        }
         footer {
             font-size: 0.7rem;
             color: #c68b6b;
             margin-top: 18px;
         }
+
+        /* 通知队列样式 */
+        .notification-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            max-width: 320px;
+        }
+        .notification {
+            background: #5a3e2e;
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 12px 18px;
+            border-radius: 60px;
+            font-size: 0.85rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            animation: slideIn 0.3s ease;
+            cursor: pointer;
+            border-left: 4px solid #ff8a5c;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .notification-fadeout {
+            animation: fadeOut 0.3s ease forwards;
+        }
+        @keyframes fadeOut {
+            to { opacity: 0; transform: translateX(100%); }
+        }
+
         .toast-msg {
             position: fixed;
             bottom: 30px;
@@ -325,24 +327,16 @@
             pointer-events: none;
             transition: opacity 0.3s;
         }
-        .offline-badge {
-            background: #ff6b3c;
-            color: white;
-            border-radius: 20px;
-            padding: 2px 8px;
-            font-size: 0.7rem;
-            margin-left: 8px;
-        }
     </style>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
 <canvas id="fireworks-canvas"></canvas>
+<div class="notification-container" id="notificationContainer"></div>
 <div class="card" id="app">
     <h1>💕双鸣蝉 💕</h1>
     <div class="sub">爱你的话说过千万遍 句句有回音</div>
 
-    <!-- 登录区块 -->
     <div class="login-overlay" id="loginPanel">
         <div class="login-title">🌸 hello！是谁来了呀🌸</div>
         <div class="name-buttons">
@@ -353,16 +347,12 @@
         <div style="font-size:0.7rem; margin-top:12px; color:#b97f5e;">💡 选择身份，查看ta是否在线</div>
     </div>
 
-    <!-- 主内容区 -->
     <div id="mainContent" style="display: none;">
-        <!-- 状态栏 -->
         <div class="status-panel">
             <div class="connection-status">
                 <div class="status-badge"><span class="status-dot" id="connDot"></span><span id="connText">连接中...</span></div>
                 <div class="status-badge"><span>👤</span><span id="currentUserLabel">未登录</span></div>
             </div>
-            
-            <!-- 对方在线状态显示区域 -->
             <div class="peer-status-area" id="peerStatusArea">
                 <div class="peer-status-text">
                     <span class="peer-dot" id="peerDot"></span>
@@ -372,7 +362,6 @@
             </div>
         </div>
 
-        <!-- 想念按钮 -->
         <div class="miss-area">
             <button class="miss-btn" id="missButton">
                 <span>💗</span>
@@ -381,11 +370,8 @@
             <div class="info-text" id="peerHint">💖 点击按钮记录此刻思念！</div>
         </div>
 
-        <!-- 记录展示区 -->
         <div class="records-area">
-            <div class="records-title">
-                📜 双鸣蝉说
-            </div>
+            <div class="records-title">📜 双鸣蝉说</div>
             <div id="recordList" class="record-list">
                 <div class="empty-records">✨ 暂无想念记录，点击按钮留下第一份想念吧 ✨</div>
             </div>
@@ -454,7 +440,6 @@
     function showHeartFirework() {
         const x = canvas.width / 2;
         const y = canvas.height / 2;
-        // 连续三次烟花
         for (let i = 0; i < 3; i++) {
             setTimeout(() => createFirework(x, y), i * 150);
         }
@@ -473,6 +458,50 @@
             }
             animate();
         }
+    }
+
+    // ========== 通知队列系统 ==========
+    let notificationQueue = [];
+    let isShowingNotification = false;
+
+    function addNotification(message, type = 'info', duration = 3000) {
+        notificationQueue.push({ message, type, duration });
+        processNotificationQueue();
+    }
+
+    function processNotificationQueue() {
+        if (isShowingNotification || notificationQueue.length === 0) return;
+        
+        isShowingNotification = true;
+        const { message, type, duration } = notificationQueue.shift();
+        
+        const container = document.getElementById('notificationContainer');
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        notification.style.borderLeftColor = type === 'miss' ? '#ff6b3c' : '#2ecc71';
+        notification.innerHTML = message;
+        
+        notification.onclick = () => {
+            notification.classList.add('notification-fadeout');
+            setTimeout(() => {
+                notification.remove();
+                isShowingNotification = false;
+                processNotificationQueue();
+            }, 300);
+        };
+        
+        container.appendChild(notification);
+        
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.classList.add('notification-fadeout');
+                setTimeout(() => {
+                    notification.remove();
+                    isShowingNotification = false;
+                    processNotificationQueue();
+                }, 300);
+            }
+        }, duration);
     }
 
     // ========== 应用逻辑 ==========
@@ -526,21 +555,15 @@
     }
 
     function generateMessage(record) {
-        const { from, to, time } = record;
+        const { from, to } = record;
         if (currentUser === "周周") {
-            if (from === "周周" && to === "小汪") {
-                return `💘 你在想小汪，为什么不直接找他`;
-            } else if (from === "小汪" && to === "周周") {
-                return `💞 小汪在想你，快去回应他`;
-            }
+            if (from === "周周" && to === "小汪") return `💘 你在想小汪，为什么不去找他`;
+            if (from === "小汪" && to === "周周") return `💞 小汪在想你，快去回应他吧`;
         } else if (currentUser === "小汪") {
-            if (from === "小汪" && to === "周周") {
-                return `💘 你在想周周，为什么不直接找她`;
-            } else if (from === "周周" && to === "小汪") {
-                return `💞 周周在想你，快去回应她`;
-            }
+            if (from === "小汪" && to === "周周") return `💘 你在想周周，为什么不去找她`;
+            if (from === "周周" && to === "小汪") return `💞 周周在想你，快去回应她吧`;
         }
-        return `${from} → ${to} at ${time}`;
+        return `${from} → ${to}`;
     }
 
     function renderRecords(records) {
@@ -561,9 +584,7 @@
         if (!socket || !isConnected) return;
         socket.emit('get-records', (response) => {
             if (response && response.success) {
-                const records = response.records || [];
-                window.recordsData = records;
-                renderRecords(records);
+                renderRecords(response.records);
             }
         });
     }
@@ -576,9 +597,7 @@
         }
         socket.emit('new-record', { from, to, time, timestamp }, (response) => {
             if (response && response.success) {
-                window.recordsData = response.records;
-                renderRecords(window.recordsData);
-                showToast(`📝 已记录：${from} 想念 ${to}`, 1500);
+                renderRecords(response.records);
                 if (callback) callback(true);
             } else {
                 showToast(`❌ 记录失败`, 2000);
@@ -604,7 +623,7 @@
             if (success) {
                 socket.emit('miss-notify', { roomId: ROOM_ID, from: currentUser, time: nowTime });
                 if (isPartnerOnline) {
-                    showToast(`💖 已向${target}传递思念，TA会收到爱心烟花`, 1500);
+                    showToast(`💖 已向${target}传递思念`, 1500);
                 } else {
                     showToast(`💖 思念已记录，${target}上线后会收到通知`, 1500);
                 }
@@ -674,15 +693,13 @@
                     loadHistory();
                     
                     if (resp.count === 2) {
-                        showToast(`🎉 ${partnerName} 在线！发送想念会有爱心烟花~`, 2000);
+                        addNotification(`🎉 ${partnerName} 在线！可以开始传递思念了`, 'info', 3000);
                     } else {
-                        showToast(`⏳ ${partnerName} 暂时不在线，等待TA上线~`, 2000);
+                        addNotification(`⏳ ${partnerName} 暂时不在线，等待TA上线~`, 'info', 3000);
                     }
                 } else {
-                    // 身份冲突或房间满
                     if (resp && resp.message) {
-                        alert(resp.message);
-                        showToast(`❌ ${resp.message}`, 3000);
+                        addNotification(`❌ ${resp.message}`, 'info', 4000);
                         document.getElementById('missButton').disabled = true;
                     }
                     loadHistory();
@@ -694,28 +711,27 @@
             isConnected = false;
             isPartnerOnline = false;
             updateConnectionUI();
-            showToast("⚠️ 连接断开", 2000);
+            addNotification("⚠️ 连接已断开", 'info', 2000);
         });
         
         socket.on('connect_error', () => {
             isConnected = false;
             isPartnerOnline = false;
             updateConnectionUI();
-            showToast("❌ 无法连接服务器", 3000);
+            addNotification("❌ 无法连接服务器，请刷新页面", 'info', 3000);
         });
         
-        // 收到离线期间的想念通知
         socket.on('offline-misses', (data) => {
             const { count, misses } = data;
-            showToast(`💌 你离线期间收到了 ${count} 次想念！`, 4000);
-            alert(`💌 你不在的时候，${partnerName} 想你了 ${count} 次！快去陪陪TA吧`);
+            addNotification(`💌 你离线期间收到了 ${count} 次想念`, 'miss', 5000);
+            // 汇总显示所有离线想念
+            const missList = misses.map(m => `• ${m.time}`).join('\n');
             loadHistory();
         });
         
-        // 对方离线时发送想念的反馈
         socket.on('miss-saved-offline', (data) => {
             const { to, count } = data;
-            showToast(`💾 ${to} 不在线，想念已记录 (想了${count}次)`, 2000);
+            addNotification(`💾 ${to} 不在线，已记录第 ${count} 次思念`, 'info', 1500);
         });
         
         socket.on('room-users', (data) => {
@@ -725,35 +741,31 @@
                 updatePartnerStatusUI();
                 
                 if (data.count === 2 && !wasOnline) {
-                    showToast(`🎉 ${partnerName} 上线啦！快点击按钮传递思念吧~`, 3000);
+                    addNotification(`🎉 ${partnerName} 上线啦！快传递思念吧~`, 'miss', 3000);
                 } else if (data.count === 1 && wasOnline) {
-                    showToast(`💔 ${partnerName} 暂时离开了，你的心意会被保存`, 3000);
+                    addNotification(`💔 ${partnerName} 暂时离开了，思念会被保存`, 'info', 3000);
                 }
             }
         });
         
-        // 收到想念通知（对方在线时，带烟花特效！）
         socket.on('someone-missed', (data) => {
             const { from, time } = data || {};
             if (from && from !== currentUser) {
                 if ((from === "周周" && currentUser === "小汪") || (from === "小汪" && currentUser === "周周")) {
-                    // 🎆 绽放爱心烟花！
                     showHeartFirework();
-                    alert(`💌 ${from} 在 ${time} 想你了，快去回应吧 💌`);
-                    showToast(`💖 ${from} 想你了！爱心烟花为你绽放~`, 2000);
+                    addNotification(`💖 ${from} 在 ${time} 想你了！`, 'miss', 4000);
                     loadHistory();
                 }
             } else if (!from) {
                 showHeartFirework();
-                alert("💌 对方想你了一次 💌");
+                addNotification(`💌 对方想你了一次`, 'miss', 3000);
                 loadHistory();
             }
         });
         
         socket.on('records-updated', (data) => {
             if (data && data.records) {
-                window.recordsData = data.records;
-                renderRecords(window.recordsData);
+                renderRecords(data.records);
             }
         });
         
