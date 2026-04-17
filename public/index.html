@@ -577,7 +577,7 @@
             updateConnectionUI();
             showToast("✅ 连接成功", 1500);
             
-            socket.emit('join-room', ROOM_ID, (resp) => {
+            socket.emit('join-room', { roomId: ROOM_ID, identity: currentUser }, (resp) => {
                 if (resp && resp.success) {
                     // 初始人数决定对方是否在线
                     isPartnerOnline = (resp.count === 2);
