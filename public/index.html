@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>双鸣蝉</title>
+    <title>双鸣蝉 | 爱心烟花</title>
     <style>
         * {
             box-sizing: border-box;
@@ -19,6 +19,19 @@
             font-family: 'Segoe UI', 'Poppins', system-ui, -apple-system, 'Helvetica Neue', sans-serif;
             margin: 0;
             padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* 烟花画布 */
+        #fireworks-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 9999;
         }
 
         .card {
@@ -32,6 +45,8 @@
             transition: all 0.3s ease;
             padding: 24px 22px 34px;
             text-align: center;
+            position: relative;
+            z-index: 1;
         }
 
         h1 {
@@ -177,7 +192,7 @@
         }
         @keyframes pulse {
             0% { opacity: 0.6; transform: scale(0.9); }
-            100% { opacity: 1; transform: scale(1.2); }
+            50% { opacity: 1; transform: scale(1.2); }
             100% { opacity: 0.6; transform: scale(0.9); }
         }
         .peer-name {
@@ -310,10 +325,19 @@
             pointer-events: none;
             transition: opacity 0.3s;
         }
+        .offline-badge {
+            background: #ff6b3c;
+            color: white;
+            border-radius: 20px;
+            padding: 2px 8px;
+            font-size: 0.7rem;
+            margin-left: 8px;
+        }
     </style>
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
 </head>
 <body>
+<canvas id="fireworks-canvas"></canvas>
 <div class="card" id="app">
     <h1>💕双鸣蝉 💕</h1>
     <div class="sub">爱你的话说过千万遍 句句有回音</div>
@@ -338,7 +362,7 @@
                 <div class="status-badge"><span>👤</span><span id="currentUserLabel">未登录</span></div>
             </div>
             
-            <!-- 对方在线状态显示区域（核心新增） -->
+            <!-- 对方在线状态显示区域 -->
             <div class="peer-status-area" id="peerStatusArea">
                 <div class="peer-status-text">
                     <span class="peer-dot" id="peerDot"></span>
@@ -354,7 +378,7 @@
                 <span>💗</span>
                 <span>I MISS YOU</span>
             </button>
-            <div class="info-text" id="peerHint">💖 点击按钮记录此刻思念</div>
+            <div class="info-text" id="peerHint">💖 点击按钮记录此刻思念，对方在线时有爱心烟花！</div>
         </div>
 
         <!-- 记录展示区 -->
@@ -366,23 +390,99 @@
                 <div class="empty-records">✨ 暂无想念记录，点击按钮留下第一份想念吧 ✨</div>
             </div>
         </div>
-        <footer>⚡ 每次点击都会记录。对方在线时会实时收到提醒，对方离线时也能心意永存。</footer>
+        <footer>⚡ 每次点击都会记录。对方在线时会绽放爱心烟花，离线时心意会被保存！</footer>
     </div>
 </div>
 <div id="toastMsg" class="toast-msg" style="opacity:0;">💬</div>
 
 <script>
-    // ---------- 全局变量 ----------
-    let currentUser = null;          // "周周" 或 "小汪"
+    // ========== 爱心烟花特效 ==========
+    const canvas = document.getElementById('fireworks-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    let animationId = null;
+
+    function resizeCanvas() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    class HeartParticle {
+        constructor(x, y, vx, vy, color) {
+            this.x = x;
+            this.y = y;
+            this.vx = vx;
+            this.vy = vy;
+            this.color = color;
+            this.alpha = 1;
+            this.size = 8;
+            this.gravity = 0.15;
+        }
+        update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            this.vy += this.gravity;
+            this.alpha -= 0.02;
+            this.size *= 0.98;
+            return this.alpha > 0;
+        }
+        draw() {
+            ctx.save();
+            ctx.globalAlpha = this.alpha;
+            ctx.font = `${this.size}px "Segoe UI Emoji", "Apple Color Emoji"`;
+            ctx.fillStyle = this.color;
+            ctx.fillText('❤️', this.x, this.y);
+            ctx.restore();
+        }
+    }
+
+    function createFirework(x, y) {
+        const colors = ['#ff3366', '#ff6633', '#ff9933', '#ffcc33', '#ff3399', '#ff66cc', '#ff0066'];
+        const heartCount = 60;
+        for (let i = 0; i < heartCount; i++) {
+            const angle = Math.random() * Math.PI * 2;
+            const speed = 3 + Math.random() * 7;
+            const vx = Math.cos(angle) * speed * (Math.random() * 1.5);
+            const vy = Math.sin(angle) * speed * (Math.random() * 1.5);
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            particles.push(new HeartParticle(x, y, vx, vy, color));
+        }
+    }
+
+    function showHeartFirework() {
+        const x = canvas.width / 2;
+        const y = canvas.height / 2;
+        // 连续三次烟花
+        for (let i = 0; i < 3; i++) {
+            setTimeout(() => createFirework(x, y), i * 150);
+        }
+        if (!animationId) {
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                particles = particles.filter(p => p.update());
+                particles.forEach(p => p.draw());
+                if (particles.length > 0) {
+                    animationId = requestAnimationFrame(animate);
+                } else {
+                    cancelAnimationFrame(animationId);
+                    animationId = null;
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+            }
+            animate();
+        }
+    }
+
+    // ========== 应用逻辑 ==========
+    let currentUser = null;
     let socket = null;
     let isConnected = false;
-    let isPartnerOnline = false;     // 对方是否在线（房间内人数=2）
+    let isPartnerOnline = false;
     const ROOM_ID = "zhouzhou_xiaowang_forever";
-    
-    // 对方的名字（用于显示）
     let partnerName = "";
 
-    // ---------- 辅助函数 ----------
     function showToast(msg, duration = 2000) {
         const toast = document.getElementById('toastMsg');
         toast.innerText = msg;
@@ -397,7 +497,6 @@
         return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
     }
 
-    // 更新对方在线状态的UI
     function updatePartnerStatusUI() {
         const peerDot = document.getElementById('peerDot');
         const peerStatusText = document.getElementById('peerStatusText');
@@ -418,7 +517,7 @@
         if (isPartnerOnline) {
             peerDot.className = "peer-dot online";
             peerStatusText.innerText = "在线 💕";
-            peerStatusMsg.innerText = `✨ ${partnerName} 也在线，珍惜当下吧 ✨`;
+            peerStatusMsg.innerText = `✨ ${partnerName} 也在线，发送想念会有爱心烟花 ✨`;
         } else {
             peerDot.className = "peer-dot offline";
             peerStatusText.innerText = "离线";
@@ -426,7 +525,6 @@
         }
     }
 
-    // 根据当前登录人生成展示文案
     function generateMessage(record) {
         const { from, to, time } = record;
         if (currentUser === "周周") {
@@ -445,7 +543,6 @@
         return `${from} → ${to} at ${time}`;
     }
 
-    // 渲染记录列表
     function renderRecords(records) {
         const container = document.getElementById('recordList');
         if (!container) return;
@@ -460,7 +557,6 @@
         }).join('');
     }
 
-    // 加载历史记录
     function loadHistory() {
         if (!socket || !isConnected) return;
         socket.emit('get-records', (response) => {
@@ -472,7 +568,6 @@
         });
     }
 
-    // 添加新记录
     function addRecordToBackend(from, to, time, timestamp, callback) {
         if (!socket || !isConnected) {
             showToast("❌ 未连接服务器，无法记录", 1500);
@@ -492,7 +587,6 @@
         });
     }
 
-    // 发送想念
     function sendMiss() {
         if (!socket || !isConnected) {
             showToast("❌ 网络未连接，请刷新页面重试", 1500);
@@ -509,17 +603,15 @@
         addRecordToBackend(currentUser, target, nowTime, timestamp, (success) => {
             if (success) {
                 socket.emit('miss-notify', { roomId: ROOM_ID, from: currentUser, time: nowTime });
-                // 如果对方在线，给予额外提示
                 if (isPartnerOnline) {
-                    showToast(`💖 已向${target}传递思念，TA会收到提醒`, 1500);
+                    showToast(`💖 已向${target}传递思念，TA会收到爱心烟花`, 1500);
                 } else {
-                    showToast(`💖 思念已记录，${target}上线后会看到`, 1500);
+                    showToast(`💖 思念已记录，${target}上线后会收到通知`, 1500);
                 }
             }
         });
     }
 
-    // 更新连接UI
     function updateConnectionUI() {
         const connDot = document.getElementById('connDot');
         const connText = document.getElementById('connText');
@@ -537,7 +629,6 @@
         updatePartnerStatusUI();
     }
 
-    // 登录逻辑
     function setupLogin() {
         let selectedName = null;
         const btns = document.querySelectorAll('.name-btn');
@@ -564,7 +655,6 @@
         });
     }
 
-    // 登录后连接socket
     function initSocketAfterLogin() {
         const socketUrl = window.location.origin;
         socket = io(socketUrl, {
@@ -579,17 +669,22 @@
             
             socket.emit('join-room', { roomId: ROOM_ID, identity: currentUser }, (resp) => {
                 if (resp && resp.success) {
-                    // 初始人数决定对方是否在线
                     isPartnerOnline = (resp.count === 2);
                     updatePartnerStatusUI();
                     loadHistory();
                     
                     if (resp.count === 2) {
-                        showToast(`🎉 ${partnerName} 在线！可以开始传递思念了`, 2000);
+                        showToast(`🎉 ${partnerName} 在线！发送想念会有爱心烟花~`, 2000);
                     } else {
                         showToast(`⏳ ${partnerName} 暂时不在线，等待TA上线~`, 2000);
                     }
                 } else {
+                    // 身份冲突或房间满
+                    if (resp && resp.message) {
+                        alert(resp.message);
+                        showToast(`❌ ${resp.message}`, 3000);
+                        document.getElementById('missButton').disabled = true;
+                    }
                     loadHistory();
                 }
             });
@@ -609,7 +704,20 @@
             showToast("❌ 无法连接服务器", 3000);
         });
         
-        // 监听房间人数变化（核心：对方上线/下线实时更新状态）
+        // 收到离线期间的想念通知
+        socket.on('offline-misses', (data) => {
+            const { count, misses } = data;
+            showToast(`💌 你离线期间收到了 ${count} 次想念！`, 4000);
+            alert(`💌 你离线期间，${partnerName} 想你了 ${count} 次！\n\n${misses.map(m => `• ${m.time}`).join('\n')}`);
+            loadHistory();
+        });
+        
+        // 对方离线时发送想念的反馈
+        socket.on('miss-saved-offline', (data) => {
+            const { to, count } = data;
+            showToast(`💾 ${to} 不在线，想念已保存 (累计${count}条)`, 2000);
+        });
+        
         socket.on('room-users', (data) => {
             if (data.roomId === ROOM_ID) {
                 const wasOnline = isPartnerOnline;
@@ -618,29 +726,30 @@
                 
                 if (data.count === 2 && !wasOnline) {
                     showToast(`🎉 ${partnerName} 上线啦！快点击按钮传递思念吧~`, 3000);
-                    // 播放一个轻微的提示音效感（震动感）
                 } else if (data.count === 1 && wasOnline) {
                     showToast(`💔 ${partnerName} 暂时离开了，你的心意会被保存`, 3000);
                 }
             }
         });
         
-        // 监听对方发来的想念通知
+        // 收到想念通知（对方在线时，带烟花特效！）
         socket.on('someone-missed', (data) => {
             const { from, time } = data || {};
             if (from && from !== currentUser) {
                 if ((from === "周周" && currentUser === "小汪") || (from === "小汪" && currentUser === "周周")) {
+                    // 🎆 绽放爱心烟花！
+                    showHeartFirework();
                     alert(`💌 ${from} 在 ${time} 想你了，快去回应吧 💌`);
-                    showToast(`💖 ${from} 想你了！`, 2000);
+                    showToast(`💖 ${from} 想你了！爱心烟花为你绽放~`, 2000);
                     loadHistory();
                 }
             } else if (!from) {
+                showHeartFirework();
                 alert("💌 对方想你了一次 💌");
                 loadHistory();
             }
         });
         
-        // 监听记录更新
         socket.on('records-updated', (data) => {
             if (data && data.records) {
                 window.recordsData = data.records;

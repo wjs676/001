@@ -14,12 +14,60 @@ const io = new Server(server, {
 });
 
 const RECORDS_FILE = path.join(__dirname, 'records.txt');
+const OFFLINE_MSGS_FILE = path.join(__dirname, 'offline_messages.json');
 
 // 存储结构
 const rooms = new Map();              // roomId -> Set of socket ids
 const socketRoom = new Map();        // socketId -> roomId
 const roomIdentities = new Map();    // roomId -> Map { identity: socketId }
 
+// 读取离线消息
+function loadOfflineMessages() {
+    try {
+        if (fs.existsSync(OFFLINE_MSGS_FILE)) {
+            const content = fs.readFileSync(OFFLINE_MSGS_FILE, 'utf8');
+            return JSON.parse(content);
+        }
+    } catch (e) {
+        console.error('读取离线消息文件失败:', e);
+    }
+    return {};
+}
+
+// 保存离线消息
+function saveOfflineMessages(messages) {
+    try {
+        fs.writeFileSync(OFFLINE_MSGS_FILE, JSON.stringify(messages, null, 2), 'utf8');
+        return true;
+    } catch (e) {
+        console.error('保存离线消息文件失败:', e);
+        return false;
+    }
+}
+
+// 添加离线想念记录
+function addOfflineMiss(from, to, time) {
+    const messages = loadOfflineMessages();
+    const key = `${to}_${from}`; // 接收方_发送方
+    if (!messages[key]) {
+        messages[key] = [];
+    }
+    messages[key].push({ from, to, time, timestamp: Date.now() });
+    saveOfflineMessages(messages);
+    return messages[key].length;
+}
+
+// 获取并清除离线想念记录
+function getAndClearOfflineMisses(identity, partnerIdentity) {
+    const messages = loadOfflineMessages();
+    const key = `${identity}_${partnerIdentity}`;
+    const misses = messages[key] || [];
+    delete messages[key];
+    saveOfflineMessages(messages);
+    return misses;
+}
+
+// 读取记录
 function loadRecords() {
     try {
         if (fs.existsSync(RECORDS_FILE)) {
@@ -33,6 +81,7 @@ function loadRecords() {
     return [];
 }
 
+// 写入记录
 function saveRecords(records) {
     try {
         fs.writeFileSync(RECORDS_FILE, JSON.stringify(records, null, 2), 'utf8');
@@ -58,13 +107,9 @@ function clearRecords() {
 io.on('connection', (socket) => {
     console.log(`✅ 用户连接: ${socket.id}`);
 
-    // 加入房间（支持身份校验）
     socket.on('join-room', (data, callback) => {
-        console.log(`收到 join-room 请求:`, data, `socketId: ${socket.id}`);
-        
         let roomId, identity;
         
-        // 兼容两种调用方式
         if (typeof data === 'string') {
             roomId = data;
             identity = null;
@@ -73,9 +118,7 @@ io.on('connection', (socket) => {
             identity = data.identity;
         }
         
-        console.log(`解析后: roomId=${roomId}, identity=${identity}`);
-        
-        // 1. 先离开旧房间
+        // 离开旧房间
         const oldRoom = socketRoom.get(socket.id);
         if (oldRoom) {
             const oldRoomSet = rooms.get(oldRoom);
@@ -85,7 +128,6 @@ io.on('connection', (socket) => {
                     rooms.delete(oldRoom);
                     roomIdentities.delete(oldRoom);
                 } else {
-                    // 清理旧房间的身份映射
                     const oldIdentities = roomIdentities.get(oldRoom);
                     if (oldIdentities) {
                         for (let [idKey, idValue] of oldIdentities.entries()) {
@@ -101,7 +143,6 @@ io.on('connection', (socket) => {
             socketRoom.delete(socket.id);
         }
         
-        // 2. 获取或创建房间
         let roomSet = rooms.get(roomId);
         if (!roomSet) {
             roomSet = new Set();
@@ -111,28 +152,21 @@ io.on('connection', (socket) => {
         
         const identities = roomIdentities.get(roomId);
         
-        // 3. 【关键】身份冲突检测：同一身份不能重复加入
+        // 身份冲突检测
         if (identity && identities && identities.has(identity)) {
-            console.log(`❌ 身份冲突: ${identity} 已经在房间中，拒绝 ${socket.id} 加入`);
             if (callback) {
-                callback({ 
-                    success: false, 
-                    message: `身份冲突：${identity} 已经在房间中，不能重复加入` 
-                });
+                callback({ success: false, message: `身份冲突：${identity} 已经在房间中` });
             }
             return;
         }
         
-        // 4. 房间人数限制（最多2人）
+        // 房间人数限制
         if (roomSet.size >= 2) {
-            console.log(`❌ 房间已满: ${roomId} 已有 ${roomSet.size} 人，拒绝 ${socket.id} 加入`);
-            if (callback) {
-                callback({ success: false, message: '房间已满 (最多2人)' });
-            }
+            if (callback) callback({ success: false, message: '房间已满 (最多2人)' });
             return;
         }
         
-        // 5. 加入房间
+        // 加入房间
         roomSet.add(socket.id);
         socketRoom.set(socket.id, roomId);
         if (identity && identities) {
@@ -141,25 +175,27 @@ io.on('connection', (socket) => {
         socket.join(roomId);
         const currentCount = roomSet.size;
         
-        console.log(`✅ 用户 ${socket.id} (${identity || '未知'}) 加入房间 ${roomId}，当前人数 ${currentCount}`);
-        console.log(`当前房间身份映射:`, Array.from(identities.entries()));
-        
-        // 6. 广播人数变化
+        console.log(`用户 ${socket.id} (${identity}) 加入房间 ${roomId}，当前人数 ${currentCount}`);
         io.to(roomId).emit('room-users', { roomId, count: currentCount });
         
-        // 7. 回调成功
-        if (callback) {
-            callback({ success: true, count: currentCount });
+        // 如果两人都在线，检查并发送离线期间错过的想念
+        if (currentCount === 2 && identity) {
+            const partnerIdentity = (identity === "周周") ? "小汪" : "周周";
+            const offlineMisses = getAndClearOfflineMisses(identity, partnerIdentity);
+            if (offlineMisses.length > 0) {
+                socket.emit('offline-misses', { count: offlineMisses.length, misses: offlineMisses });
+                console.log(`📬 发送离线想念给 ${identity}，共 ${offlineMisses.length} 条`);
+            }
         }
+        
+        if (callback) callback({ success: true, count: currentCount });
     });
     
-    // 获取历史记录
     socket.on('get-records', (callback) => {
         const records = loadRecords();
         if (callback) callback({ success: true, records });
     });
     
-    // 新增记录
     socket.on('new-record', (data, callback) => {
         const { from, to, time, timestamp } = data;
         if (!from || !to) {
@@ -177,7 +213,6 @@ io.on('connection', (socket) => {
         if (callback) callback({ success: true, records: updatedRecords });
     });
     
-    // 清空记录
     socket.on('clear-records', (callback) => {
         const emptyRecords = clearRecords();
         rooms.forEach((_, roomId) => {
@@ -186,15 +221,27 @@ io.on('connection', (socket) => {
         if (callback) callback({ success: true, records: emptyRecords });
     });
     
-    // 发送想念通知
     socket.on('miss-notify', ({ roomId, from, time }) => {
         const curRoom = socketRoom.get(socket.id);
         if (!curRoom || curRoom !== roomId) return;
-        socket.to(roomId).emit('someone-missed', { from, time });
-        console.log(`💕 ${from} 发送了想念`);
+        
+        const roomSet = rooms.get(roomId);
+        const isPartnerOnline = roomSet && roomSet.size === 2;
+        
+        if (isPartnerOnline) {
+            // 对方在线，直接发送实时通知（带烟花特效）
+            socket.to(roomId).emit('someone-missed', { from, time, isOnline: true });
+            console.log(`💕 ${from} 发送了想念（对方在线，实时通知）`);
+        } else {
+            // 对方离线，保存离线消息
+            const to = (from === "周周") ? "小汪" : "周周";
+            const count = addOfflineMiss(from, to, time);
+            console.log(`💾 ${from} 发送了想念（对方离线，已保存，累计${count}条）`);
+            // 通知发送方：对方离线，已保存
+            socket.emit('miss-saved-offline', { to, time, count });
+        }
     });
     
-    // 断开连接
     socket.on('disconnect', () => {
         const roomId = socketRoom.get(socket.id);
         if (roomId) {
@@ -207,7 +254,6 @@ io.on('connection', (socket) => {
                     for (let [identity, id] of identities.entries()) {
                         if (id === socket.id) {
                             identities.delete(identity);
-                            console.log(`🗑️ 移除身份映射: ${identity}`);
                             break;
                         }
                     }
@@ -216,13 +262,11 @@ io.on('connection', (socket) => {
                 if (roomSet.size === 0) {
                     rooms.delete(roomId);
                     roomIdentities.delete(roomId);
-                    console.log(`🗑️ 房间 ${roomId} 已清空`);
                 } else {
                     io.to(roomId).emit('room-users', { roomId, count: roomSet.size });
                 }
             }
             socketRoom.delete(socket.id);
-            console.log(`用户 ${socket.id} 离开房间 ${roomId}`);
         }
         console.log(`❌ 用户断开: ${socket.id}`);
     });
@@ -234,4 +278,5 @@ const PORT = process.env.PORT || 3000;
 server.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 服务器运行在 http://0.0.0.0:${PORT}`);
     console.log(`📁 记录文件位置: ${RECORDS_FILE}`);
+    console.log(`📁 离线消息文件位置: ${OFFLINE_MSGS_FILE}`);
 });
